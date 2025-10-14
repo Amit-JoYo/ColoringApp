@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
@@ -182,7 +181,9 @@ fun PaintingCanvas(
 
     // Effect to fit the image to the screen when the bitmap or canvas size changes.
     LaunchedEffect(imageSessionId, canvasSize) {
-        fitToScreen()
+        if (canvasSize != Size.Zero) {
+            fitToScreen()
+        }
     }
 
     // A state for the transformable gesture, used for zooming and panning.
@@ -202,13 +203,14 @@ fun PaintingCanvas(
                 .transformable(state = transformableState)
                 .pointerInput(Unit) {
                     detectTapGestures {
-                        // Transform the tap coordinates to the bitmap's coordinate system.
+                        // To calculate the tap's location on the bitmap, we need to reverse the transformations
+                        // that were applied to the canvas. The graphicsLayer applies scaling around the center,
+                        // and then translation.
                         val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        // The bitmap is drawn at the top-left of the canvas, but scaled around the canvas center.
-                        // To find the tap's location on the bitmap, we reverse the transformation:
-                        // 1. Un-translate the tap point from the screen's coordinate system to the canvas's.
+                        // 1. Un-translate the tap point.
+                        val untranslated = it - offset
                         // 2. Un-scale the point around the canvas center.
-                        val transformedOffset = (it - canvasCenter - offset) / scale + canvasCenter
+                        val transformedOffset = (untranslated - canvasCenter) / scale + canvasCenter
                         viewModel.startFloodFill(
                             transformedOffset.x.toInt(),
                             transformedOffset.y.toInt()
