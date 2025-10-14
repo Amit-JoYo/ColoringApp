@@ -155,8 +155,8 @@ fun PaintingCanvas(
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
 
-    // Effect to fit the image to the screen when the bitmap or canvas size changes.
-    LaunchedEffect(bitmap, canvasSize) {
+    // A function that calculates the scale and offset to fit the bitmap to the screen.
+    val fitToScreen = {
         if (canvasSize != Size.Zero) {
             val canvasWidth = canvasSize.width
             val canvasHeight = canvasSize.height
@@ -175,6 +175,11 @@ fun PaintingCanvas(
             )
             onOffsetChange(Offset.Zero)
         }
+    }
+
+    // Effect to fit the image to the screen when the bitmap or canvas size changes.
+    LaunchedEffect(bitmap, canvasSize) {
+        fitToScreen()
     }
 
     // A state for the transformable gesture, used for zooming and panning.
