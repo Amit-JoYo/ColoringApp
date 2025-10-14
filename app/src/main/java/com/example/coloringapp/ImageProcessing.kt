@@ -9,8 +9,27 @@ import org.opencv.core.Size
 import org.opencv.core.TermCriteria
 import org.opencv.imgproc.Imgproc
 
+private fun isColoringPage(bitmap: Bitmap): Boolean {
+    // Create a smaller version of the bitmap to speed up analysis
+    val thumbnail = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
+
+    val pixels = IntArray(thumbnail.width * thumbnail.height)
+    thumbnail.getPixels(pixels, 0, thumbnail.width, 0, 0, thumbnail.width, thumbnail.height)
+
+    // Count the number of unique colors
+    val uniqueColors = pixels.toSet()
+
+    // If there are very few unique colors, it's likely a B&W drawing
+    // This threshold might need tuning, but it's a good starting point.
+    return uniqueColors.size < 50
+}
 
 fun convertToGrayscaleWithEdges(bitmap: Bitmap): Bitmap {
+    // Check if the image is already a coloring page
+    if (isColoringPage(bitmap)) {
+        return bitmap
+    }
+
     // 1. Resize the image if it's too large to prevent memory issues
     val mat = Mat()
     Utils.bitmapToMat(bitmap, mat)
