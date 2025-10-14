@@ -204,7 +204,7 @@ fun PaintingCanvas(
                     detectTapGestures {
                         // Transform the tap coordinates to the bitmap's coordinate system.
                         val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        val transformedOffset = (it - offset - center) / scale + center
+                        val transformedOffset = (it - center - offset) / scale + center
                         viewModel.startFloodFill(
                             transformedOffset.x.toInt(),
                             transformedOffset.y.toInt()
