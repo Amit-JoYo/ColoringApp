@@ -32,12 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.ImageLoader
@@ -103,6 +106,7 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val showColorPicker = remember { mutableStateOf(false) }
+    var canvasSize by remember { mutableStateOf(Size.Zero) }
 
     val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
         scale *= zoomChange
@@ -112,9 +116,11 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onSizeChanged { canvasSize = it.toSize() }
             .pointerInput(Unit) {
                 detectTapGestures {
-                    val transformedOffset = (it - offset) / scale
+                    val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                    val transformedOffset = (it - offset - center) / scale + center
                     viewModel.startFloodFill(transformedOffset.x.toInt(), transformedOffset.y.toInt())
                 }
             }
