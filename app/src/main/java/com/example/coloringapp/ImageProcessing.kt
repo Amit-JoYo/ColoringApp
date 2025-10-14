@@ -93,9 +93,9 @@ fun segmentImageByColor(bitmap: Bitmap): Bitmap {
     for (i in labelsInt.indices) {
         val clusterId = labelsInt[i]
         val center = centers.get(clusterId, 0)
-        newMatData[i * 3] = center[0].toByte()     // Blue
-        newMatData[i * 3 + 1] = center[1].toByte() // Green
-        newMatData[i * 3 + 2] = center[2].toByte() // Red
+        newMatData[i * 3] = center[0].toInt().toByte()     // Blue
+        newMatData[i * 3 + 1] = center[1].toInt().toByte() // Green
+        newMatData[i * 3 + 2] = center[2].toInt().toByte() // Red
     }
 
     // Create a new Mat for the result and populate it with the segmented color data
