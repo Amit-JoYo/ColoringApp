@@ -16,6 +16,10 @@ class PaintingViewModel : ViewModel() {
     private val _imageBitmap = MutableStateFlow<Bitmap?>(null)
     val imageBitmap = _imageBitmap.asStateFlow()
 
+    // A unique ID for the current image session. Changes only when a new image is loaded.
+    private val _imageSessionId = MutableStateFlow(0)
+    val imageSessionId = _imageSessionId.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -49,6 +53,7 @@ class PaintingViewModel : ViewModel() {
             redoStack.clear()
             undoStack.add(processedBitmap.copy(processedBitmap.config, true))
             updateUndoRedoStates()
+            _imageSessionId.value++ // New image session
             _isLoading.value = false
         }
     }
@@ -65,6 +70,7 @@ class PaintingViewModel : ViewModel() {
             redoStack.clear()
             undoStack.add(processedBitmap.copy(processedBitmap.config, true))
             updateUndoRedoStates()
+            _imageSessionId.value++ // New image session
             _isLoading.value = false
         }
     }

@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
@@ -63,6 +62,7 @@ import androidx.compose.animation.AnimatedVisibility
 @Composable
 fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
     val imageBitmap by viewModel.imageBitmap.collectAsState()
+    val imageSessionId by viewModel.imageSessionId.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -113,6 +113,7 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
         } else {
             PaintingCanvas(
                 bitmap = imageBitmap!!,
+                imageSessionId = imageSessionId,
                 viewModel = viewModel,
                 scale = scale,
                 offset = offset,
@@ -139,6 +140,7 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
 @Composable
 fun PaintingCanvas(
     bitmap: Bitmap,
+    imageSessionId: Int,
     viewModel: PaintingViewModel,
     scale: Float,
     offset: Offset,
@@ -178,7 +180,7 @@ fun PaintingCanvas(
     }
 
     // Effect to fit the image to the screen when the bitmap or canvas size changes.
-    LaunchedEffect(bitmap, canvasSize) {
+    LaunchedEffect(imageSessionId, canvasSize) {
         fitToScreen()
     }
 
@@ -196,6 +198,7 @@ fun PaintingCanvas(
                 .onSizeChanged {
                     canvasSize = it.toSize()
                 }
+                .transformable(state = transformableState)
                 .pointerInput(Unit) {
                     detectTapGestures {
                         // Transform the tap coordinates to the bitmap's coordinate system.
@@ -217,7 +220,6 @@ fun PaintingCanvas(
                         translationX = offset.x,
                         translationY = offset.y
                     )
-                    .transformable(state = transformableState)
             ) {
                 drawImage(bitmap.asImageBitmap())
             }
