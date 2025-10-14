@@ -36,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -183,6 +184,21 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onSizeChanged {
+                        canvasSize = it.toSize()
+                        fitToScreen()
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            // Transform the tap coordinates to the bitmap's coordinate system.
+                            val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                            val transformedOffset = (it - offset - center) / scale + center
+                            viewModel.startFloodFill(
+                                transformedOffset.x.toInt(),
+                                transformedOffset.y.toInt()
+                            )
+                        }
+                    }
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
@@ -191,7 +207,12 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                     )
                     .transformable(state = transformableState)
             ) {
-                drawImage(bitmap.asImageBitmap())
+                withTransform({
+                    translate(offset.x, offset.y)
+                    scale(scale, scale, pivot = center)
+                }) {
+                    drawImage(bitmap.asImageBitmap())
+                }
             }
             PaintingControls(
                 viewModel = viewModel,
