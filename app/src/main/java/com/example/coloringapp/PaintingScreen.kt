@@ -35,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -174,14 +175,13 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                         }
                     }
                     .transformable(state = transformableState)
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offset.x,
-                        translationY = offset.y
-                    )
             ) {
-                drawImage(bitmap.asImageBitmap())
+                withTransform({
+                    translate(offset.x, offset.y)
+                    scale(scale, scale, pivot = center)
+                }) {
+                    drawImage(bitmap.asImageBitmap())
+                }
             }
             PaintingControls(
                 viewModel = viewModel,
