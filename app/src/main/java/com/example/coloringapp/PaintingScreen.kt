@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
@@ -65,6 +66,10 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Hoisted state for scale and offset
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let {
@@ -106,7 +111,14 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
                 }
             }
         } else {
-            PaintingCanvas(imageBitmap!!, viewModel)
+            PaintingCanvas(
+                bitmap = imageBitmap!!,
+                viewModel = viewModel,
+                scale = scale,
+                offset = offset,
+                onScaleChange = { scale = it },
+                onOffsetChange = { offset = it }
+            )
         }
         if (isLoading) {
             CircularProgressIndicator()
@@ -119,13 +131,20 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
  *
  * @param bitmap The bitmap image to be displayed and colored.
  * @param viewModel The view model that manages the state of the painting screen.
+ * @param scale The current scale of the canvas.
+ * @param offset The current offset of the canvas.
+ * @param onScaleChange A lambda to be called when the scale changes.
+ * @param onOffsetChange A lambda to be called when the offset changes.
  */
 @Composable
-fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
-    // State for the scale and offset of the canvas, used for zooming and panning.
-    var scale by remember { mutableStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-
+fun PaintingCanvas(
+    bitmap: Bitmap,
+    viewModel: PaintingViewModel,
+    scale: Float,
+    offset: Offset,
+    onScaleChange: (Float) -> Unit,
+    onOffsetChange: (Offset) -> Unit
+) {
     // State for showing and hiding the color picker.
     val showColorPicker = remember { mutableStateOf(false) }
 
@@ -136,28 +155,32 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
 
-    // A function that calculates the scale and offset to fit the bitmap to the screen.
-    val fitToScreen = {
-        val canvasWidth = canvasSize.width
-        val canvasHeight = canvasSize.height
-        val bitmapWidth = bitmap.width.toFloat()
-        val bitmapHeight = bitmap.height.toFloat()
+    // Effect to fit the image to the screen when the bitmap or canvas size changes.
+    LaunchedEffect(bitmap, canvasSize) {
+        if (canvasSize != Size.Zero) {
+            val canvasWidth = canvasSize.width
+            val canvasHeight = canvasSize.height
+            val bitmapWidth = bitmap.width.toFloat()
+            val bitmapHeight = bitmap.height.toFloat()
 
-        val canvasRatio = canvasWidth / canvasHeight
-        val bitmapRatio = bitmapWidth / bitmapHeight
+            val canvasRatio = canvasWidth / canvasHeight
+            val bitmapRatio = bitmapWidth / bitmapHeight
 
-        scale = if (canvasRatio > bitmapRatio) {
-            canvasHeight / bitmapHeight
-        } else {
-            canvasWidth / bitmapWidth
+            onScaleChange(
+                if (canvasRatio > bitmapRatio) {
+                    canvasHeight / bitmapHeight
+                } else {
+                    canvasWidth / bitmapWidth
+                }
+            )
+            onOffsetChange(Offset.Zero)
         }
-        offset = Offset.Zero
     }
 
     // A state for the transformable gesture, used for zooming and panning.
     val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        scale *= zoomChange
-        offset += offsetChange
+        onScaleChange(scale * zoomChange)
+        onOffsetChange(offset + offsetChange)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -167,7 +190,6 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                 .fillMaxSize()
                 .onSizeChanged {
                     canvasSize = it.toSize()
-                    fitToScreen()
                 }
                 .pointerInput(Unit) {
                     detectTapGestures {
@@ -180,19 +202,39 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                         )
                     }
                 }
-                .transformable(state = transformableState)
         ) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onSizeChanged {
+                        canvasSize = it.toSize()
+                        fitToScreen()
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            // Transform the tap coordinates to the bitmap's coordinate system.
+                            val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                            val transformedOffset = (it - offset - center) / scale + center
+                            viewModel.startFloodFill(
+                                transformedOffset.x.toInt(),
+                                transformedOffset.y.toInt()
+                            )
+                        }
+                    }
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
                         translationX = offset.x,
                         translationY = offset.y
                     )
+                    .transformable(state = transformableState)
             ) {
-                drawImage(bitmap.asImageBitmap())
+                withTransform({
+                    translate(offset.x, offset.y)
+                    scale(scale, scale, pivot = center)
+                }) {
+                    drawImage(bitmap.asImageBitmap())
+                }
             }
             PaintingControls(
                 viewModel = viewModel,
