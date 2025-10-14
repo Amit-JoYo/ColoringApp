@@ -169,6 +169,7 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                         )
                     }
                 }
+                .transformable(state = transformableState)
         ) {
             Canvas(
                 modifier = Modifier
@@ -179,7 +180,6 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                         translationX = offset.x,
                         translationY = offset.y
                     )
-                    .transformable(state = transformableState)
             ) {
                 drawImage(bitmap.asImageBitmap())
             }
