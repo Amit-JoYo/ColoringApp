@@ -20,8 +20,12 @@ fun processImageToLineArt(bitmap: Bitmap): Bitmap {
     val edgesMat = Mat()
     Imgproc.Canny(blurredMat, edgesMat, 50.0, 150.0)
 
+    val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(3.0, 3.0))
+    val closedMat = Mat()
+    Imgproc.morphologyEx(edgesMat, closedMat, Imgproc.MORPH_CLOSE, kernel)
+
     val invertedMat = Mat()
-    org.opencv.core.Core.bitwise_not(edgesMat, invertedMat)
+    org.opencv.core.Core.bitwise_not(closedMat, invertedMat)
 
     val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
     Utils.matToBitmap(invertedMat, resultBitmap)
