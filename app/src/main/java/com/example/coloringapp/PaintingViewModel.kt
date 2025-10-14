@@ -16,6 +16,9 @@ class PaintingViewModel : ViewModel() {
     private val _imageBitmap = MutableStateFlow<Bitmap?>(null)
     val imageBitmap = _imageBitmap.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
+
     private val _selectedColor = MutableStateFlow(Color.Red)
     val selectedColor = _selectedColor.asStateFlow()
 
@@ -39,26 +42,30 @@ class PaintingViewModel : ViewModel() {
 
     fun setImageBitmap(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
-            val processedBitmap = processImageToLineArt(bitmap)
+            _isLoading.value = true
+            val processedBitmap = segmentImageByColor(bitmap)
             _imageBitmap.value = processedBitmap
             undoStack.clear()
             redoStack.clear()
             undoStack.add(processedBitmap.copy(processedBitmap.config, true))
             updateUndoRedoStates()
+            _isLoading.value = false
         }
     }
 
     fun setImageBitmapFromDrawable(context: android.content.Context, drawableId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
             val options = android.graphics.BitmapFactory.Options()
             options.inMutable = true
             val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, drawableId, options)
-            val processedBitmap = processImageToLineArt(bitmap)
+            val processedBitmap = segmentImageByColor(bitmap)
             _imageBitmap.value = processedBitmap
             undoStack.clear()
             redoStack.clear()
             undoStack.add(processedBitmap.copy(processedBitmap.config, true))
             updateUndoRedoStates()
+            _isLoading.value = false
         }
     }
 
