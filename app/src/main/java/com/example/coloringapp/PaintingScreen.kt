@@ -180,39 +180,19 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                         )
                     }
                 }
+                .transformable(state = transformableState)
         ) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onSizeChanged {
-                        canvasSize = it.toSize()
-                        fitToScreen()
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            // Transform the tap coordinates to the bitmap's coordinate system.
-                            val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                            val transformedOffset = (it - offset - center) / scale + center
-                            viewModel.startFloodFill(
-                                transformedOffset.x.toInt(),
-                                transformedOffset.y.toInt()
-                            )
-                        }
-                    }
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
                         translationX = offset.x,
                         translationY = offset.y
                     )
-                    .transformable(state = transformableState)
             ) {
-                withTransform({
-                    translate(offset.x, offset.y)
-                    scale(scale, scale, pivot = center)
-                }) {
-                    drawImage(bitmap.asImageBitmap())
-                }
+                drawImage(bitmap.asImageBitmap())
             }
             PaintingControls(
                 viewModel = viewModel,
