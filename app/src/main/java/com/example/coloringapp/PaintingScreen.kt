@@ -154,32 +154,32 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxSize()
-                .onSizeChanged {
-                    canvasSize = it.toSize()
-                    fitToScreen()
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        // Transform the tap coordinates to the bitmap's coordinate system.
-                        val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        val transformedOffset = (it - offset - center) / scale + center
-                        viewModel.startFloodFill(
-                            transformedOffset.x.toInt(),
-                            transformedOffset.y.toInt()
-                        )
-                    }
-                }
-                .transformable(state = transformableState)
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offset.x,
-                    translationY = offset.y
-                )
         ) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onSizeChanged {
+                        canvasSize = it.toSize()
+                        fitToScreen()
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            // Transform the tap coordinates to the bitmap's coordinate system.
+                            val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                            val transformedOffset = (it - offset - center) / scale + center
+                            viewModel.startFloodFill(
+                                transformedOffset.x.toInt(),
+                                transformedOffset.y.toInt()
+                            )
+                        }
+                    }
+                    .transformable(state = transformableState)
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
             ) {
                 drawImage(bitmap.asImageBitmap())
             }
