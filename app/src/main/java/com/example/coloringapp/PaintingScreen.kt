@@ -46,20 +46,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.rememberCoroutineScope
 
 import androidx.activity.result.PickVisualMediaRequest
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.res.painterResource
+import androidx.compose.animation.AnimatedVisibility
 
 @Composable
 fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
     val imageBitmap by viewModel.imageBitmap.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let {
@@ -71,7 +73,7 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
 
             loader.enqueue(request).job.invokeOnCompletion { throwable ->
                 if (throwable == null) {
-                    GlobalScope.launch(Dispatchers.IO) {
+                    coroutineScope.launch(Dispatchers.IO) {
                         val imageResult = loader.execute(request)
                         if (imageResult is SuccessResult) {
                             val bitmap = (imageResult.drawable).toBitmap()
@@ -101,56 +103,142 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
     }
 }
 
+/**
+ * A composable that displays the painting canvas and its controls.
+ *
+ * @param bitmap The bitmap image to be displayed and colored.
+ * @param viewModel The view model that manages the state of the painting screen.
+ */
 @Composable
 fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
+    // State for the scale and offset of the canvas, used for zooming and panning.
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+
+    // State for showing and hiding the color picker.
     val showColorPicker = remember { mutableStateOf(false) }
+
+    // State for the size of the canvas, used for calculating the fit-to-screen scale.
     var canvasSize by remember { mutableStateOf(Size.Zero) }
 
+    // State for enabling and disabling the undo and redo buttons.
+    val canUndo by viewModel.canUndo.collectAsState()
+    val canRedo by viewModel.canRedo.collectAsState()
+
+    // A function that calculates the scale and offset to fit the bitmap to the screen.
+    val fitToScreen = {
+        val canvasWidth = canvasSize.width
+        val canvasHeight = canvasSize.height
+        val bitmapWidth = bitmap.width.toFloat()
+        val bitmapHeight = bitmap.height.toFloat()
+
+        val canvasRatio = canvasWidth / canvasHeight
+        val bitmapRatio = bitmapWidth / bitmapHeight
+
+        scale = if (canvasRatio > bitmapRatio) {
+            canvasHeight / bitmapHeight
+        } else {
+            canvasWidth / bitmapWidth
+        }
+        offset = Offset.Zero
+    }
+
+    // A state for the transformable gesture, used for zooming and panning.
     val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
         scale *= zoomChange
         offset += offsetChange
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { canvasSize = it.toSize() }
-            .pointerInput(Unit) {
-                detectTapGestures {
-                    val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                    val transformedOffset = (it - offset - center) / scale + center
-                    viewModel.startFloodFill(transformedOffset.x.toInt(), transformedOffset.y.toInt())
-                }
-            }
-    ) {
-        Canvas(
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offset.x,
-                    translationY = offset.y
-                )
-                .transformable(state = transformableState)
+                .onSizeChanged {
+                    canvasSize = it.toSize()
+                    fitToScreen()
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        // Transform the tap coordinates to the bitmap's coordinate system.
+                        val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                        val transformedOffset = (it - offset - center) / scale + center
+                        viewModel.startFloodFill(
+                            transformedOffset.x.toInt(),
+                            transformedOffset.y.toInt()
+                        )
+                    }
+                }
         ) {
-            drawImage(bitmap.asImageBitmap())
-        }
-        Row {
-            Button(onClick = { viewModel.clearImage() }) {
-                Text("Back")
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+                    .transformable(state = transformableState)
+            ) {
+                drawImage(bitmap.asImageBitmap())
             }
-            IconButton(onClick = { showColorPicker.value = !showColorPicker.value }) {
-                Icon(painter = painterResource(id = R.drawable.ic_brush), contentDescription = "Select Color", tint = viewModel.selectedColor.collectAsState().value)
-            }
+            PaintingControls(
+                viewModel = viewModel,
+                onShowColorPicker = { showColorPicker.value = !showColorPicker.value },
+                onFitToScreen = { fitToScreen() },
+                canUndo = canUndo,
+                canRedo = canRedo
+            )
         }
-        if (showColorPicker.value) {
+        AnimatedVisibility(visible = showColorPicker.value) {
             HoneycombColorPicker(onColorSelected = { color ->
                 viewModel.setSelectedColor(color)
                 showColorPicker.value = false
             })
+        }
+    }
+}
+
+/**
+ * A composable that displays the controls for the painting canvas.
+ *
+ * @param viewModel The view model that manages the state of the painting screen.
+ * @param onShowColorPicker A lambda function that is called when the color picker button is clicked.
+ * @param onFitToScreen A lambda function that is called when the fit-to-screen button is clicked.
+ * @param canUndo A boolean that indicates whether the undo button should be enabled.
+ * @param canRedo A boolean that indicates whether the redo button should be enabled.
+ */
+@Composable
+fun PaintingControls(
+    viewModel: PaintingViewModel,
+    onShowColorPicker: () -> Unit,
+    onFitToScreen: () -> Unit,
+    canUndo: Boolean,
+    canRedo: Boolean
+) {
+    Row {
+        Button(onClick = { viewModel.clearImage() }) {
+            Text("Back")
+        }
+        IconButton(onClick = onShowColorPicker) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_brush),
+                contentDescription = "Select Color",
+                tint = viewModel.selectedColor.collectAsState().value
+            )
+        }
+        IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
+            Icon(painter = painterResource(id = R.drawable.ic_undo), contentDescription = "Undo")
+        }
+        IconButton(onClick = { viewModel.redo() }, enabled = canRedo) {
+            Icon(painter = painterResource(id = R.drawable.ic_redo), contentDescription = "Redo")
+        }
+        IconButton(onClick = onFitToScreen) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_fit_to_screen),
+                contentDescription = "Fit to Screen"
+            )
         }
     }
 }
