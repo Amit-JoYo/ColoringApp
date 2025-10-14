@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.drawable.toBitmap
@@ -203,8 +202,12 @@ fun PaintingCanvas(
                 .pointerInput(Unit) {
                     detectTapGestures {
                         // Transform the tap coordinates to the bitmap's coordinate system.
-                        val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        val transformedOffset = (it - offset - center) / scale + center
+                        val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                        // The bitmap is drawn at the top-left of the canvas, but scaled around the canvas center.
+                        // To find the tap's location on the bitmap, we reverse the transformation:
+                        // 1. Un-translate the tap point from the screen's coordinate system to the canvas's.
+                        // 2. Un-scale the point around the canvas center.
+                        val transformedOffset = (it - canvasCenter - offset) / scale + canvasCenter
                         viewModel.startFloodFill(
                             transformedOffset.x.toInt(),
                             transformedOffset.y.toInt()
