@@ -1,30 +1,30 @@
 package com.example.coloringapp
 
 import android.graphics.Bitmap
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
+import org.opencv.android.OpenCVLoader
+import org.opencv.android.Utils
+import org.opencv.core.Mat
+import org.opencv.core.Size
+import org.opencv.imgproc.Imgproc
 
 fun processImageToLineArt(bitmap: Bitmap): Bitmap {
-    val grayscaleBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(grayscaleBitmap)
-    val paint = Paint()
-    val colorMatrix = ColorMatrix()
-    colorMatrix.setSaturation(0f)
-    paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
-    canvas.drawBitmap(bitmap, 0f, 0f, paint)
+    val mat = Mat()
+    Utils.bitmapToMat(bitmap, mat)
 
-    // Increase contrast
-    val contrast = 2f // 0..10 1 is default
-    val brightness = -128f // -255..255 0 is default
-    val contrastMatrix = ColorMatrix(floatArrayOf(
-        contrast, 0f, 0f, 0f, brightness,
-        0f, contrast, 0f, 0f, brightness,
-        0f, 0f, contrast, 0f, brightness,
-        0f, 0f, 0f, 1f, 0f
-    ))
-    paint.colorFilter = ColorMatrixColorFilter(contrastMatrix)
-    canvas.drawBitmap(grayscaleBitmap, 0f, 0f, paint)
+    val grayMat = Mat()
+    Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_BGR2GRAY)
 
-    return grayscaleBitmap
+    val blurredMat = Mat()
+    Imgproc.GaussianBlur(grayMat, blurredMat, Size(5.0, 5.0), 0.0)
+
+    val edgesMat = Mat()
+    Imgproc.Canny(blurredMat, edgesMat, 50.0, 150.0)
+
+    val invertedMat = Mat()
+    org.opencv.core.Core.bitwise_not(edgesMat, invertedMat)
+
+    val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+    Utils.matToBitmap(invertedMat, resultBitmap)
+
+    return resultBitmap
 }

@@ -1,3 +1,5 @@
+.gradle/
+local.properties
 /app/build/intermediates/incremental/debugAndroidTest-mergeJavaRes/zip-cache/1_PK4M+Dzune4nTqanAN89h0ZMk=
 /app/build/intermediates/incremental/debugAndroidTest-mergeJavaRes/zip-cache/5gtMhQrHPknSO_BenPeHJkE3IH8=
 /app/build/intermediates/incremental/debugAndroidTest-mergeJavaRes/zip-cache/6wuRRQoCXxJOrU_wn1d5yxsvAd0=

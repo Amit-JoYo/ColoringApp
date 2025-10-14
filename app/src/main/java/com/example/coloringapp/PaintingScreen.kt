@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,6 +61,7 @@ import androidx.compose.animation.AnimatedVisibility
 @Composable
 fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
     val imageBitmap by viewModel.imageBitmap.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -85,21 +87,29 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
         }
     }
 
-    if (imageBitmap == null) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                ImageSelectionScreen(viewModel = viewModel, onImageSelected = { })
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageBitmap == null) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    ImageSelectionScreen(viewModel = viewModel, onImageSelected = { })
+                }
+                Button(onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                    Text("Select Image from Gallery")
+                }
             }
-            Button(onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                Text("Select Image from Gallery")
-            }
+        } else {
+            PaintingCanvas(imageBitmap!!, viewModel)
         }
-    } else {
-        PaintingCanvas(imageBitmap!!, viewModel)
+        if (isLoading) {
+            CircularProgressIndicator()
+        }
     }
 }
 
