@@ -170,16 +170,16 @@ fun PaintingCanvas(bitmap: Bitmap, viewModel: PaintingViewModel) {
                     }
                 }
                 .transformable(state = transformableState)
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y
+                )
         ) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offset.x,
-                        translationY = offset.y
-                    )
             ) {
                 drawImage(bitmap.asImageBitmap())
             }
