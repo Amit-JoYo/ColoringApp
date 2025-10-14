@@ -10,18 +10,45 @@ import org.opencv.core.TermCriteria
 import org.opencv.imgproc.Imgproc
 
 private fun isColoringPage(bitmap: Bitmap): Boolean {
-    // Create a smaller version of the bitmap to speed up analysis
-    val thumbnail = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
+    val mat = Mat()
+    Utils.bitmapToMat(bitmap, mat)
 
-    val pixels = IntArray(thumbnail.width * thumbnail.height)
-    thumbnail.getPixels(pixels, 0, thumbnail.width, 0, 0, thumbnail.width, thumbnail.height)
+    // --- 1. Check Saturation ---
+    // Convert the image from BGR to HSV color space
+    val hsvMat = Mat()
+    Imgproc.cvtColor(mat, hsvMat, Imgproc.COLOR_BGR2HSV)
+    val hsvChannels = mutableListOf<Mat>()
+    Core.split(hsvMat, hsvChannels)
+    val saturationChannel = hsvChannels[1]
+    val meanSaturation = Core.mean(saturationChannel)
 
-    // Count the number of unique colors
-    val uniqueColors = pixels.toSet()
+    // If the image has significant color, it's not a B&W page.
+    val saturationThreshold = 25.0 // Increased threshold to be more lenient
+    if (meanSaturation.`val`[0] >= saturationThreshold) {
+        return false
+    }
 
-    // If there are very few unique colors, it's likely a B&W drawing
-    // This threshold might need tuning, but it's a good starting point.
-    return uniqueColors.size < 50
+    // --- 2. Check Brightness Distribution ---
+    // If the image is grayscale, check if it's mostly white.
+    val valueChannel = hsvChannels[2] // Value channel represents brightness
+    val totalPixels = valueChannel.total().toInt()
+    var whitePixels = 0
+    val whiteThreshold = 240 // Pixels with brightness > 240 are considered "white"
+
+    // This is more efficient than a histogram for a simple threshold count
+    val buffer = ByteArray(totalPixels)
+    valueChannel.get(0, 0, buffer)
+    for (byte in buffer) {
+        // Convert signed byte to unsigned int
+        if (byte.toInt() and 0xFF > whiteThreshold) {
+            whitePixels++
+        }
+    }
+
+    val whitePixelPercentage = whitePixels.toDouble() / totalPixels
+
+    // If more than 70% of the image is white, it's very likely a coloring page.
+    return whitePixelPercentage > 0.70
 }
 
 fun convertToGrayscaleWithEdges(bitmap: Bitmap): Bitmap {
