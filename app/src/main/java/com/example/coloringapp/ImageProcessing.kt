@@ -30,19 +30,14 @@ fun convertToGrayscaleWithEdges(bitmap: Bitmap): Bitmap {
     Imgproc.bilateralFilter(grayMat, bilateralFilteredMat, 9, 75.0, 75.0)
 
 
-    // 4. Detect edges using an adaptive threshold
+    // 4. Detect edges using the Canny edge detector
     val edgesMat = Mat()
-    Imgproc.adaptiveThreshold(
-        bilateralFilteredMat,
-        edgesMat,
-        255.0,
-        Imgproc.ADAPTIVE_THRESH_MEAN_C,
-        Imgproc.THRESH_BINARY,
-        11,
-        2.0
-    )
+    Imgproc.Canny(bilateralFilteredMat, edgesMat, 50.0, 150.0)
 
-    // 5. Convert the black and white Mat back to a Bitmap
+    // 5. Invert the image to get black edges on a white background
+    Core.bitwise_not(edgesMat, edgesMat)
+
+    // 6. Convert the black and white Mat back to a Bitmap
     val resultBitmap = Bitmap.createBitmap(edgesMat.cols(), edgesMat.rows(), Bitmap.Config.ARGB_8888)
     Utils.matToBitmap(edgesMat, resultBitmap)
     return resultBitmap
