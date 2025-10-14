@@ -43,7 +43,7 @@ class PaintingViewModel : ViewModel() {
     fun setImageBitmap(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
             _isLoading.value = true
-            val processedBitmap = segmentImageByColor(bitmap)
+            val processedBitmap = convertToGrayscaleWithEdges(bitmap)
             _imageBitmap.value = processedBitmap
             undoStack.clear()
             redoStack.clear()
@@ -59,7 +59,7 @@ class PaintingViewModel : ViewModel() {
             val options = android.graphics.BitmapFactory.Options()
             options.inMutable = true
             val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, drawableId, options)
-            val processedBitmap = segmentImageByColor(bitmap)
+            val processedBitmap = convertToGrayscaleWithEdges(bitmap)
             _imageBitmap.value = processedBitmap
             undoStack.clear()
             redoStack.clear()
