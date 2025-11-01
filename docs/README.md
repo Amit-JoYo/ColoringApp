@@ -30,16 +30,36 @@ ColoringApp is a modern Android application that transforms any image into a dig
   - Fit-to-screen functionality
   - Real-time rendering
 
-- **Color System**
+- **Drawing Tools**
+  - Dual-mode operation: Flood Fill and Brush
+  - Brush tool for coloring details and small areas
+  - Smooth freehand drawing with drag gestures
+  - Toggle between fill and brush modes instantly
+
+- **Enhanced Color System**
   - Honeycomb color picker design
   - Wide color palette
   - Visual color preview
+  - Recent color history (last 10 colors)
+  - Quick color reselection from history
+
+- **Advanced Undo/Redo**
+  - Unlimited undo/redo operations
+  - Action labels and timestamps
+  - Smart brush stroke grouping
+  - Foundation for future history preview UI
+
+- **Save & Share**
+  - Save colored images to gallery
+  - Share artwork via any app
+  - Cross-Android version compatibility
+  - Automatic file management
 
 - **User Experience**
-  - Unlimited undo/redo operations
   - Intuitive touch controls
   - Modern Material Design 3 UI
   - Responsive loading states
+  - Visual feedback for all actions
 
 ### Image Processing
 - **Smart Detection**: Automatically identifies grayscale vs. color images
@@ -126,18 +146,29 @@ implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
 ### Canvas Controls
 - **Zoom**: Pinch to zoom in/out
-- **Pan**: Drag to move around the image
-- **Color**: Tap the brush icon to select colors
-- **Fill**: Tap any region to fill with selected color
+- **Pan**: Two-finger drag to move around the image
+- **Drawing Mode**: Tap the mode button to switch between Fill and Brush
+  - **Fill Mode** (default): Tap to flood-fill regions
+  - **Brush Mode**: Drag to draw and color small areas/details
+- **Color**: Tap the color palette icon to select colors
+  - Choose from color picker
+  - Or tap recent colors for quick selection
 - **Undo/Redo**: Use arrow buttons to undo/redo actions
 - **Fit Screen**: Tap the fit icon to auto-resize image
+- **Save**: Save your artwork to device gallery
+- **Share**: Share your creation via any app
 - **Back**: Return to image selection screen
 
 ### Pro Tips
 - **Zoom In**: For detailed work, zoom in before coloring small areas
+- **Brush for Details**: Use Brush mode for fine details and artistic touches
+- **Fill for Speed**: Use Fill mode to quickly color large regions
+- **Color History**: Recent colors appear above the picker - tap to reuse them
+- **Brush Strokes**: Each complete drag gesture is one undo unit
 - **Color Tolerance**: The app automatically handles similar colors in the same region
 - **Undo History**: Your entire coloring session is saved - undo/redo as needed
 - **Image Quality**: Higher resolution images provide better coloring detail
+- **Save Often**: Save your progress regularly to avoid losing work
 
 ## Architecture
 
@@ -222,19 +253,28 @@ Main state management class for the coloring functionality.
 ```kotlin
 val imageBitmap: StateFlow<Bitmap?>          // Current image
 val selectedColor: StateFlow<Color>          // Selected color
-val canUndo: StateFlow<Boolean>             // Undo availability
-val canRedo: StateFlow<Boolean>             // Redo availability
-val isLoading: StateFlow<Boolean>           // Loading state
+val colorHistory: StateFlow<List<Color>>     // Recent colors (last 10)
+val drawingMode: StateFlow<DrawingMode>      // Fill or Brush mode
+val canUndo: StateFlow<Boolean>              // Undo availability
+val canRedo: StateFlow<Boolean>              // Redo availability
+val isLoading: StateFlow<Boolean>            // Loading state
+val saveStatus: StateFlow<SaveStatus>        // Save operation status
 ```
 
 #### Methods
 ```kotlin
 fun setImageBitmap(bitmap: Bitmap)          // Load new image
-fun setSelectedColor(color: Color)          // Change brush color
+fun setSelectedColor(color: Color)          // Change brush color (updates history)
+fun setDrawingMode(mode: DrawingMode)       // Switch between Fill/Brush
 fun startFloodFill(x: Int, y: Int)          // Fill region at coordinates
+fun brushDraw(x: Int, y: Int)               // Draw at coordinates (fixed 15px size)
+fun startBrushStroke()                      // Begin new brush stroke (undo point)
 fun undo()                                  // Undo last action
 fun redo()                                  // Redo last undone action
 fun clearImage()                            // Return to image selection
+fun saveImageToGallery(context: Context)    // Save image to gallery
+fun shareImage(context: Context): Intent?   // Create share intent
+fun resetSaveStatus()                       // Reset save status to idle
 ```
 
 ### ImageProcessing
@@ -331,5 +371,5 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 ---
 
 **Last Updated**: November 1, 2025  
-**Version**: 1.0.0  
+**Version**: 1.2.0  
 **Maintainer**: Amit-JoYo

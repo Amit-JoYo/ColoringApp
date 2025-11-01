@@ -31,6 +31,18 @@ class PaintingViewModel : ViewModel() {
     private val _imageBitmap = MutableStateFlow<Bitmap?>(null)
     val imageBitmap = _imageBitmap.asStateFlow()
 
+    // Original bitmap before processing (for adjustment)
+    private val _originalBitmap = MutableStateFlow<Bitmap?>(null)
+    val originalBitmap = _originalBitmap.asStateFlow()
+
+    // Whether to show adjustment screen
+    private val _showAdjustment = MutableStateFlow(false)
+    val showAdjustment = _showAdjustment.asStateFlow()
+
+    // Web search state
+    private val _webSearchQuery = MutableStateFlow<String?>(null)
+    val webSearchQuery = _webSearchQuery.asStateFlow()
+
     // A unique ID for the current image session. Changes only when a new image is loaded.
     private val _imageSessionId = MutableStateFlow(0)
     val imageSessionId = _imageSessionId.asStateFlow()
@@ -41,14 +53,26 @@ class PaintingViewModel : ViewModel() {
     private val _selectedColor = MutableStateFlow(Color.Red)
     val selectedColor = _selectedColor.asStateFlow()
 
-    private val undoStack = mutableListOf<Bitmap>()
-    private val redoStack = mutableListOf<Bitmap>()
+    // Color history for recent colors
+    private val _colorHistory = MutableStateFlow<List<Color>>(emptyList())
+    val colorHistory = _colorHistory.asStateFlow()
+
+    // Drawing mode: Fill or Brush
+    private val _drawingMode = MutableStateFlow<DrawingMode>(DrawingMode.Fill)
+    val drawingMode = _drawingMode.asStateFlow()
+
+    private val undoStack = mutableListOf<UndoState>()
+    private val redoStack = mutableListOf<UndoState>()
 
     private val _canUndo = MutableStateFlow(false)
     val canUndo = _canUndo.asStateFlow()
 
     private val _canRedo = MutableStateFlow(false)
     val canRedo = _canRedo.asStateFlow()
+
+    // Undo/Redo history info for preview
+    private val _undoHistory = MutableStateFlow<List<HistoryItem>>(emptyList())
+    val undoHistory = _undoHistory.asStateFlow()
 
     private val _saveStatus = MutableStateFlow<SaveStatus>(SaveStatus.Idle)
     val saveStatus = _saveStatus.asStateFlow()
@@ -65,14 +89,25 @@ class PaintingViewModel : ViewModel() {
     fun setImageBitmap(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
             _isLoading.value = true
-            val processedBitmap = segmentImageByColor(bitmap)
-            _imageBitmap.value = processedBitmap
-            undoStack.clear()
-            redoStack.clear()
-            undoStack.add(processedBitmap.copy(processedBitmap.config, true))
-            updateUndoRedoStates()
-            _imageSessionId.value++ // New image session
-            _isLoading.value = false
+            
+            // Check if image needs processing (is it colored?)
+            val needsProcessing = !isGrayscaleImage(bitmap)
+            
+            if (needsProcessing) {
+                // Store original and show adjustment screen
+                _originalBitmap.value = bitmap
+                _showAdjustment.value = true
+                _isLoading.value = false
+            } else {
+                // Grayscale image - use directly
+                _imageBitmap.value = bitmap
+                undoStack.clear()
+                redoStack.clear()
+                undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
+                updateUndoRedoStates()
+                _imageSessionId.value++
+                _isLoading.value = false
+            }
         }
     }
 
@@ -82,19 +117,91 @@ class PaintingViewModel : ViewModel() {
             val options = android.graphics.BitmapFactory.Options()
             options.inMutable = true
             val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, drawableId, options)
-            val processedBitmap = segmentImageByColor(bitmap)
-            _imageBitmap.value = processedBitmap
+            
+            // Pre-loaded images are already grayscale, use directly
+            _imageBitmap.value = bitmap
             undoStack.clear()
             redoStack.clear()
-            undoStack.add(processedBitmap.copy(processedBitmap.config, true))
+            undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
             updateUndoRedoStates()
-            _imageSessionId.value++ // New image session
+            _imageSessionId.value++
             _isLoading.value = false
         }
     }
 
+    /**
+     * Apply the adjusted bitmap from the adjustment screen
+     */
+    fun applyAdjustedBitmap(bitmap: Bitmap) {
+        viewModelScope.launch(Dispatchers.Default) {
+            _imageBitmap.value = bitmap
+            undoStack.clear()
+            redoStack.clear()
+            undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
+            updateUndoRedoStates()
+            _imageSessionId.value++
+            _showAdjustment.value = false
+            _originalBitmap.value = null
+        }
+    }
+
+    /**
+     * Cancel adjustment and return to image selection
+     */
+    fun cancelAdjustment() {
+        _showAdjustment.value = false
+        _originalBitmap.value = null
+    }
+
+    /**
+     * Start web search for coloring pages
+     */
+    fun startWebSearch(query: String) {
+        _webSearchQuery.value = query
+    }
+
+    /**
+     * Cancel web search and return to image selection
+     */
+    fun cancelWebSearch() {
+        _webSearchQuery.value = null
+    }
+
+    /**
+     * Check if bitmap is grayscale
+     */
+    private fun isGrayscaleImage(bitmap: Bitmap): Boolean {
+        val mat = org.opencv.core.Mat()
+        org.opencv.android.Utils.bitmapToMat(bitmap, mat)
+
+        val hsvMat = org.opencv.core.Mat()
+        org.opencv.imgproc.Imgproc.cvtColor(mat, hsvMat, org.opencv.imgproc.Imgproc.COLOR_BGR2HSV)
+
+        val hsvChannels = mutableListOf<org.opencv.core.Mat>()
+        org.opencv.core.Core.split(hsvMat, hsvChannels)
+
+        val saturationChannel = hsvChannels[1]
+        val meanSaturation = org.opencv.core.Core.mean(saturationChannel)
+
+        mat.release()
+        hsvMat.release()
+        hsvChannels.forEach { it.release() }
+
+        val grayscaleThreshold = 15.0
+        return meanSaturation.`val`[0] < grayscaleThreshold
+    }
+
     fun setSelectedColor(color: Color) {
         _selectedColor.value = color
+        // Add to color history
+        val currentHistory = _colorHistory.value.toMutableList()
+        currentHistory.remove(color) // Remove if exists
+        currentHistory.add(0, color) // Add to front
+        _colorHistory.value = currentHistory.take(10) // Keep last 10 colors
+    }
+
+    fun setDrawingMode(mode: DrawingMode) {
+        _drawingMode.value = mode
     }
 
     val isPaintingScreen: Boolean
@@ -111,7 +218,7 @@ class PaintingViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.Default) {
             _imageBitmap.value?.let {
                 val currentBitmap = it.copy(it.config, true)
-                undoStack.add(currentBitmap)
+                undoStack.add(UndoState(currentBitmap, "Fill", System.currentTimeMillis()))
                 redoStack.clear()
                 val newBitmap = floodFill(it, x, y, _selectedColor.value)
                 _imageBitmap.value = newBitmap
@@ -120,24 +227,62 @@ class PaintingViewModel : ViewModel() {
         }
     }
 
-    fun undo() {
-        if (undoStack.isNotEmpty()) {
-            val lastBitmap = undoStack.removeAt(undoStack.size - 1)
-            _imageBitmap.value?.let {
-                redoStack.add(it.copy(it.config, true))
+    /**
+     * Draw with brush at specified coordinates
+     */
+    fun brushDraw(x: Int, y: Int) {
+        _imageBitmap.value?.let { bitmap ->
+            // Draw directly on the existing bitmap (which is already mutable from startBrushStroke)
+            val canvas = android.graphics.Canvas(bitmap)
+            val paint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(
+                    (_selectedColor.value.alpha * 255).toInt(),
+                    (_selectedColor.value.red * 255).toInt(),
+                    (_selectedColor.value.green * 255).toInt(),
+                    (_selectedColor.value.blue * 255).toInt()
+                )
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.FILL
             }
-            _imageBitmap.value = lastBitmap
+            // Fixed 15px brush size - ideal for coloring details
+            canvas.drawCircle(x.toFloat(), y.toFloat(), 15f, paint)
+            
+            // Force StateFlow update by creating a new reference
+            _imageBitmap.value = bitmap.copy(bitmap.config, true)
+        }
+    }
+
+    /**
+     * Start a new brush stroke (for undo/redo)
+     */
+    fun startBrushStroke() {
+        _imageBitmap.value?.let { currentBitmap ->
+            // Save the current state before starting the brush stroke
+            undoStack.add(UndoState(currentBitmap.copy(currentBitmap.config, true), "Brush Stroke", System.currentTimeMillis()))
+            redoStack.clear()
+            updateUndoRedoStates()
+        }
+    }
+
+    fun undo() {
+        if (undoStack.size > 1) {
+            val currentState = undoStack.removeAt(undoStack.size - 1)
+            _imageBitmap.value?.let {
+                redoStack.add(UndoState(it.copy(it.config, true), currentState.action, System.currentTimeMillis()))
+            }
+            val previousState = undoStack.last()
+            _imageBitmap.value = previousState.bitmap.copy(previousState.bitmap.config, true)
             updateUndoRedoStates()
         }
     }
 
     fun redo() {
         if (redoStack.isNotEmpty()) {
-            val nextBitmap = redoStack.removeAt(redoStack.size - 1)
+            val nextState = redoStack.removeAt(redoStack.size - 1)
             _imageBitmap.value?.let {
-                undoStack.add(it.copy(it.config, true))
+                undoStack.add(UndoState(it.copy(it.config, true), nextState.action, System.currentTimeMillis()))
             }
-            _imageBitmap.value = nextBitmap
+            _imageBitmap.value = nextState.bitmap.copy(nextState.bitmap.config, true)
             updateUndoRedoStates()
         }
     }
@@ -145,6 +290,11 @@ class PaintingViewModel : ViewModel() {
     private fun updateUndoRedoStates() {
         _canUndo.value = undoStack.size > 1
         _canRedo.value = redoStack.isNotEmpty()
+        
+        // Update undo/redo history for UI preview
+        _undoHistory.value = undoStack.takeLast(5).map { state ->
+            HistoryItem(state.action, state.timestamp, isUndo = true)
+        }.reversed()
     }
 
     /**
@@ -251,6 +401,32 @@ class PaintingViewModel : ViewModel() {
         _saveStatus.value = SaveStatus.Idle
     }
 }
+
+/**
+ * Drawing mode for painting
+ */
+enum class DrawingMode {
+    Fill,   // Flood fill mode
+    Brush   // Free-hand brush drawing
+}
+
+/**
+ * Represents an undo/redo state with metadata
+ */
+data class UndoState(
+    val bitmap: Bitmap,
+    val action: String,
+    val timestamp: Long
+)
+
+/**
+ * History item for UI display
+ */
+data class HistoryItem(
+    val action: String,
+    val timestamp: Long,
+    val isUndo: Boolean
+)
 
 /**
  * Represents the status of a save operation

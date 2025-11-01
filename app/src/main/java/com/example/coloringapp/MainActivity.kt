@@ -30,9 +30,16 @@ class MainActivity : ComponentActivity() {
             ColoringAppTheme {
                 val viewModel: PaintingViewModel = viewModel()
                 val isPaintingScreen by viewModel.imageBitmap.collectAsState()
+                val showAdjustment by viewModel.showAdjustment.collectAsState()
+                val originalBitmap by viewModel.originalBitmap.collectAsState()
+                val webSearchQuery by viewModel.webSearchQuery.collectAsState()
 
-                BackHandler(enabled = isPaintingScreen != null) {
-                    viewModel.clearImage()
+                BackHandler(enabled = isPaintingScreen != null || showAdjustment || webSearchQuery != null) {
+                    when {
+                        webSearchQuery != null -> viewModel.cancelWebSearch()
+                        showAdjustment -> viewModel.cancelAdjustment()
+                        else -> viewModel.clearImage()
+                    }
                 }
 
                 // A surface container using the 'background' color from the theme
@@ -40,7 +47,34 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PaintingScreen(viewModel)
+                    when {
+                        webSearchQuery != null -> {
+                            WebImageSearchScreen(
+                                searchQuery = webSearchQuery!!,
+                                onImageSelected = { bitmap ->
+                                    viewModel.cancelWebSearch()
+                                    viewModel.setImageBitmap(bitmap)
+                                },
+                                onBack = {
+                                    viewModel.cancelWebSearch()
+                                }
+                            )
+                        }
+                        showAdjustment && originalBitmap != null -> {
+                            ImageAdjustmentScreen(
+                                originalBitmap = originalBitmap!!,
+                                onApply = { adjustedBitmap ->
+                                    viewModel.applyAdjustedBitmap(adjustedBitmap)
+                                },
+                                onCancel = {
+                                    viewModel.cancelAdjustment()
+                                }
+                            )
+                        }
+                        else -> {
+                            PaintingScreen(viewModel)
+                        }
+                    }
                 }
             }
         }

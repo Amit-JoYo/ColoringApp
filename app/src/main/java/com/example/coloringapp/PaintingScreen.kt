@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -105,18 +106,13 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
         contentAlignment = Alignment.Center
     ) {
         if (imageBitmap == null) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    ImageSelectionScreen(viewModel = viewModel, onImageSelected = { })
+            ImageSelectionScreen(
+                viewModel = viewModel, 
+                onImageSelected = { },
+                onWebSearchRequested = { query ->
+                    viewModel.startWebSearch(query)
                 }
-                Button(onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                    Text("Select Image from Gallery")
-                }
-            }
+            )
         } else {
             PaintingCanvas(
                 bitmap = imageBitmap!!,
@@ -166,6 +162,10 @@ fun PaintingCanvas(
     // State for enabling and disabling the undo and redo buttons.
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
+    
+    // Observe drawing mode and color history
+    val drawingMode by viewModel.drawingMode.collectAsState()
+    val colorHistory by viewModel.colorHistory.collectAsState()
     
     // Observe save status
     val saveStatus by viewModel.saveStatus.collectAsState()
@@ -236,43 +236,91 @@ fun PaintingCanvas(
                     canvasSize = it.toSize()
                 }
                 .transformable(state = transformableState)
-                .pointerInput(scale, offset, canvasSize, bitmap) {
-                    detectTapGestures { tapOffset ->
-                        // Transform tap coordinates from screen space to bitmap space
-                        // The bitmap is drawn centered in the canvas, and graphicsLayer
-                        // applies scale (around canvas center) and translation (pan).
-                        
-                        // Step 1: Calculate canvas center
-                        val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        
-                        // Step 2: Remove the translation (undo pan)
-                        val afterTranslation = Offset(
-                            tapOffset.x - offset.x,
-                            tapOffset.y - offset.y
+                .pointerInput(scale, offset, canvasSize, bitmap, drawingMode) {
+                    if (drawingMode == DrawingMode.Fill) {
+                        detectTapGestures { tapOffset ->
+                            // Transform tap coordinates from screen space to bitmap space
+                            val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                            
+                            val afterTranslation = Offset(
+                                tapOffset.x - offset.x,
+                                tapOffset.y - offset.y
+                            )
+                            
+                            val afterScale = Offset(
+                                canvasCenter.x + (afterTranslation.x - canvasCenter.x) / scale,
+                                canvasCenter.y + (afterTranslation.y - canvasCenter.y) / scale
+                            )
+                            
+                            val bitmapTopLeft = Offset(
+                                (canvasSize.width - bitmap.width) / 2,
+                                (canvasSize.height - bitmap.height) / 2
+                            )
+                            
+                            val bitmapCoords = Offset(
+                                afterScale.x - bitmapTopLeft.x,
+                                afterScale.y - bitmapTopLeft.y
+                            )
+                            
+                            val bitmapX = bitmapCoords.x.toInt().coerceIn(0, bitmap.width - 1)
+                            val bitmapY = bitmapCoords.y.toInt().coerceIn(0, bitmap.height - 1)
+                            
+                            viewModel.startFloodFill(bitmapX, bitmapY)
+                        }
+                    } else {
+                        // Brush mode - detect drag gestures for drawing
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                viewModel.startBrushStroke()
+                                
+                                // Transform coordinates for initial touch
+                                val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                                val afterTranslation = Offset(
+                                    startOffset.x - offset.x,
+                                    startOffset.y - offset.y
+                                )
+                                val afterScale = Offset(
+                                    canvasCenter.x + (afterTranslation.x - canvasCenter.x) / scale,
+                                    canvasCenter.y + (afterTranslation.y - canvasCenter.y) / scale
+                                )
+                                val bitmapTopLeft = Offset(
+                                    (canvasSize.width - bitmap.width) / 2,
+                                    (canvasSize.height - bitmap.height) / 2
+                                )
+                                val bitmapCoords = Offset(
+                                    afterScale.x - bitmapTopLeft.x,
+                                    afterScale.y - bitmapTopLeft.y
+                                )
+                                val bitmapX = bitmapCoords.x.toInt().coerceIn(0, bitmap.width - 1)
+                                val bitmapY = bitmapCoords.y.toInt().coerceIn(0, bitmap.height - 1)
+                                
+                                viewModel.brushDraw(bitmapX, bitmapY)
+                            },
+                            onDrag = { change, _ ->
+                                // Transform drag coordinates
+                                val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
+                                val afterTranslation = Offset(
+                                    change.position.x - offset.x,
+                                    change.position.y - offset.y
+                                )
+                                val afterScale = Offset(
+                                    canvasCenter.x + (afterTranslation.x - canvasCenter.x) / scale,
+                                    canvasCenter.y + (afterTranslation.y - canvasCenter.y) / scale
+                                )
+                                val bitmapTopLeft = Offset(
+                                    (canvasSize.width - bitmap.width) / 2,
+                                    (canvasSize.height - bitmap.height) / 2
+                                )
+                                val bitmapCoords = Offset(
+                                    afterScale.x - bitmapTopLeft.x,
+                                    afterScale.y - bitmapTopLeft.y
+                                )
+                                val bitmapX = bitmapCoords.x.toInt().coerceIn(0, bitmap.width - 1)
+                                val bitmapY = bitmapCoords.y.toInt().coerceIn(0, bitmap.height - 1)
+                                
+                                viewModel.brushDraw(bitmapX, bitmapY)
+                            }
                         )
-                        
-                        // Step 3: Remove the scale (which is applied around canvas center)
-                        val afterScale = Offset(
-                            canvasCenter.x + (afterTranslation.x - canvasCenter.x) / scale,
-                            canvasCenter.y + (afterTranslation.y - canvasCenter.y) / scale
-                        )
-                        
-                        // Step 4: The bitmap is centered in the canvas, so convert to bitmap coords
-                        val bitmapTopLeft = Offset(
-                            (canvasSize.width - bitmap.width) / 2,
-                            (canvasSize.height - bitmap.height) / 2
-                        )
-                        
-                        val bitmapCoords = Offset(
-                            afterScale.x - bitmapTopLeft.x,
-                            afterScale.y - bitmapTopLeft.y
-                        )
-                        
-                        // Ensure coordinates are within bitmap bounds
-                        val bitmapX = bitmapCoords.x.toInt().coerceIn(0, bitmap.width - 1)
-                        val bitmapY = bitmapCoords.y.toInt().coerceIn(0, bitmap.height - 1)
-                        
-                        viewModel.startFloodFill(bitmapX, bitmapY)
                     }
                 }
         ) {
@@ -312,14 +360,49 @@ fun PaintingCanvas(
                 },
                 canUndo = canUndo,
                 canRedo = canRedo,
-                isSaving = saveStatus is SaveStatus.Saving
+                isSaving = saveStatus is SaveStatus.Saving,
+                drawingMode = drawingMode,
+                onDrawingModeChange = { viewModel.setDrawingMode(it) }
             )
         }
         AnimatedVisibility(visible = showColorPicker.value) {
-            HoneycombColorPicker(onColorSelected = { color ->
-                viewModel.setSelectedColor(color)
-                showColorPicker.value = false
-            })
+            Column {
+                // Show color history if available
+                if (colorHistory.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            "Recent:",
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        colorHistory.forEach { recentColor ->
+                            Surface(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures {
+                                            viewModel.setSelectedColor(recentColor)
+                                            showColorPicker.value = false
+                                        }
+                                    },
+                                color = recentColor,
+                                shape = CircleShape
+                            ) {}
+                        }
+                    }
+                }
+                HoneycombColorPicker(
+                    onColorSelected = { color ->
+                        viewModel.setSelectedColor(color)
+                        showColorPicker.value = false
+                    },
+                    currentBitmap = bitmap
+                )
+            }
         }
     }
 }
@@ -345,7 +428,9 @@ fun PaintingControls(
     onShare: () -> Unit,
     canUndo: Boolean,
     canRedo: Boolean,
-    isSaving: Boolean = false
+    isSaving: Boolean = false,
+    drawingMode: DrawingMode,
+    onDrawingModeChange: (DrawingMode) -> Unit
 ) {
     Row(
         modifier = Modifier.padding(8.dp),
@@ -353,6 +438,21 @@ fun PaintingControls(
     ) {
         Button(onClick = { viewModel.clearImage() }) {
             Text("Back")
+        }
+        IconButton(
+            onClick = {
+                onDrawingModeChange(
+                    if (drawingMode == DrawingMode.Fill) DrawingMode.Brush else DrawingMode.Fill
+                )
+            }
+        ) {
+            Icon(
+                painter = painterResource(
+                    id = if (drawingMode == DrawingMode.Fill) R.drawable.ic_brush else R.drawable.ic_brush_draw
+                ),
+                contentDescription = if (drawingMode == DrawingMode.Fill) "Switch to Brush" else "Switch to Fill",
+                tint = if (drawingMode == DrawingMode.Brush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
         }
         IconButton(onClick = onShowColorPicker) {
             Icon(
