@@ -180,9 +180,18 @@ fun PaintingCanvas(
         }
     }
 
-    // Effect to fit the image to the screen when the bitmap or canvas size changes.
-    LaunchedEffect(imageSessionId, canvasSize) {
-        fitToScreen()
+    // Effect to fit the image to the screen when a new image is loaded
+    LaunchedEffect(imageSessionId) {
+        if (canvasSize != Size.Zero) {
+            fitToScreen()
+        }
+    }
+    
+    // Effect to fit the image when canvas size is first initialized
+    LaunchedEffect(canvasSize) {
+        if (canvasSize != Size.Zero && scale == 1f && offset == Offset.Zero) {
+            fitToScreen()
+        }
     }
 
     // A state for the transformable gesture, used for zooming and panning.
@@ -200,19 +209,43 @@ fun PaintingCanvas(
                     canvasSize = it.toSize()
                 }
                 .transformable(state = transformableState)
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        // Transform the tap coordinates to the bitmap's coordinate system.
+                .pointerInput(scale, offset, canvasSize, bitmap) {
+                    detectTapGestures { tapOffset ->
+                        // Transform tap coordinates from screen space to bitmap space
+                        // The bitmap is drawn centered in the canvas, and graphicsLayer
+                        // applies scale (around canvas center) and translation (pan).
+                        
+                        // Step 1: Calculate canvas center
                         val canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2)
-                        // The bitmap is drawn at the top-left of the canvas, but scaled around the canvas center.
-                        // To find the tap's location on the bitmap, we reverse the transformation:
-                        // 1. Un-translate the tap point from the screen's coordinate system to the canvas's.
-                        // 2. Un-scale the point around the canvas center.
-                        val transformedOffset = (it - canvasCenter - offset) / scale + canvasCenter
-                        viewModel.startFloodFill(
-                            transformedOffset.x.toInt(),
-                            transformedOffset.y.toInt()
+                        
+                        // Step 2: Remove the translation (undo pan)
+                        val afterTranslation = Offset(
+                            tapOffset.x - offset.x,
+                            tapOffset.y - offset.y
                         )
+                        
+                        // Step 3: Remove the scale (which is applied around canvas center)
+                        val afterScale = Offset(
+                            canvasCenter.x + (afterTranslation.x - canvasCenter.x) / scale,
+                            canvasCenter.y + (afterTranslation.y - canvasCenter.y) / scale
+                        )
+                        
+                        // Step 4: The bitmap is centered in the canvas, so convert to bitmap coords
+                        val bitmapTopLeft = Offset(
+                            (canvasSize.width - bitmap.width) / 2,
+                            (canvasSize.height - bitmap.height) / 2
+                        )
+                        
+                        val bitmapCoords = Offset(
+                            afterScale.x - bitmapTopLeft.x,
+                            afterScale.y - bitmapTopLeft.y
+                        )
+                        
+                        // Ensure coordinates are within bitmap bounds
+                        val bitmapX = bitmapCoords.x.toInt().coerceIn(0, bitmap.width - 1)
+                        val bitmapY = bitmapCoords.y.toInt().coerceIn(0, bitmap.height - 1)
+                        
+                        viewModel.startFloodFill(bitmapX, bitmapY)
                     }
                 }
         ) {
@@ -226,7 +259,19 @@ fun PaintingCanvas(
                         translationY = offset.y
                     )
             ) {
-                drawImage(bitmap.asImageBitmap())
+                // Draw the image centered in the canvas
+                val bitmapWidth = bitmap.width.toFloat()
+                val bitmapHeight = bitmap.height.toFloat()
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+                
+                drawImage(
+                    image = bitmap.asImageBitmap(),
+                    topLeft = Offset(
+                        (canvasWidth - bitmapWidth) / 2,
+                        (canvasHeight - bitmapHeight) / 2
+                    )
+                )
             }
             PaintingControls(
                 viewModel = viewModel,
