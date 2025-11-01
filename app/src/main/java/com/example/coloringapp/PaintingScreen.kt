@@ -1,5 +1,6 @@
 package com.example.coloringapp
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -59,6 +60,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import android.widget.Toast
 
 @Composable
 fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
@@ -148,6 +154,9 @@ fun PaintingCanvas(
     onScaleChange: (Float) -> Unit,
     onOffsetChange: (Offset) -> Unit
 ) {
+    // Context for accessing system services
+    val context = LocalContext.current
+    
     // State for showing and hiding the color picker.
     val showColorPicker = remember { mutableStateOf(false) }
 
@@ -157,6 +166,24 @@ fun PaintingCanvas(
     // State for enabling and disabling the undo and redo buttons.
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
+    
+    // Observe save status
+    val saveStatus by viewModel.saveStatus.collectAsState()
+    
+    // Handle save status changes
+    LaunchedEffect(saveStatus) {
+        when (saveStatus) {
+            is SaveStatus.Success -> {
+                Toast.makeText(context, "Image saved successfully!", Toast.LENGTH_SHORT).show()
+                viewModel.resetSaveStatus()
+            }
+            is SaveStatus.Error -> {
+                Toast.makeText(context, "Error: ${(saveStatus as SaveStatus.Error).message}", Toast.LENGTH_SHORT).show()
+                viewModel.resetSaveStatus()
+            }
+            else -> { /* Do nothing */ }
+        }
+    }
 
     // A function that calculates the scale and offset to fit the bitmap to the screen.
     val fitToScreen = {
@@ -277,8 +304,15 @@ fun PaintingCanvas(
                 viewModel = viewModel,
                 onShowColorPicker = { showColorPicker.value = !showColorPicker.value },
                 onFitToScreen = { fitToScreen() },
+                onSave = { viewModel.saveImageToGallery(context) },
+                onShare = {
+                    viewModel.shareImage(context)?.let { shareIntent ->
+                        context.startActivity(Intent.createChooser(shareIntent, "Share your artwork"))
+                    }
+                },
                 canUndo = canUndo,
-                canRedo = canRedo
+                canRedo = canRedo,
+                isSaving = saveStatus is SaveStatus.Saving
             )
         }
         AnimatedVisibility(visible = showColorPicker.value) {
@@ -296,18 +330,27 @@ fun PaintingCanvas(
  * @param viewModel The view model that manages the state of the painting screen.
  * @param onShowColorPicker A lambda function that is called when the color picker button is clicked.
  * @param onFitToScreen A lambda function that is called when the fit-to-screen button is clicked.
+ * @param onSave A lambda function that is called when the save button is clicked.
+ * @param onShare A lambda function that is called when the share button is clicked.
  * @param canUndo A boolean that indicates whether the undo button should be enabled.
  * @param canRedo A boolean that indicates whether the redo button should be enabled.
+ * @param isSaving A boolean that indicates whether a save operation is in progress.
  */
 @Composable
 fun PaintingControls(
     viewModel: PaintingViewModel,
     onShowColorPicker: () -> Unit,
     onFitToScreen: () -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
     canUndo: Boolean,
-    canRedo: Boolean
+    canRedo: Boolean,
+    isSaving: Boolean = false
 ) {
-    Row {
+    Row(
+        modifier = Modifier.padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         Button(onClick = { viewModel.clearImage() }) {
             Text("Back")
         }
@@ -328,6 +371,25 @@ fun PaintingControls(
             Icon(
                 painter = painterResource(id = R.drawable.ic_fit_to_screen),
                 contentDescription = "Fit to Screen"
+            )
+        }
+        IconButton(onClick = onSave, enabled = !isSaving) {
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_save),
+                    contentDescription = "Save to Gallery"
+                )
+            }
+        }
+        IconButton(onClick = onShare) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_share),
+                contentDescription = "Share"
             )
         }
     }

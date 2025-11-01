@@ -1,6 +1,42 @@
 # ColoringApp Release Notes
 
-## Version 1.0.0 - Initial Release
+# ColoringApp Release Notes
+
+## Version 1.1.0 (November 1, 2025)
+
+### 🎉 New Features
+- **Save to Gallery**: Save your colored artworks directly to device gallery
+  - Automatic organization in Pictures/ColoringApp folder
+  - PNG format with high quality (100%)
+  - Unique timestamped filenames
+  - Support for Android 7.0 to Android 14
+
+- **Share Functionality**: Share your artworks with friends and social media
+  - Compatible with all sharing apps (WhatsApp, Instagram, Email, etc.)
+  - Secure sharing using FileProvider
+  - Quick access via share icon in control bar
+
+### 🎨 UI Improvements
+- Added save button with loading indicator
+- Added share button for quick sharing
+- Better control bar layout with improved spacing
+- Toast notifications for save success/error feedback
+
+### 🔧 Technical Improvements
+- Implemented proper Android storage permissions
+- FileProvider configuration for secure file sharing
+- Async file operations for smooth performance
+- Comprehensive error handling with user feedback
+- Support for both modern (MediaStore) and legacy storage APIs
+
+### 📚 Documentation
+- Added comprehensive Save/Export feature documentation
+- Updated API reference with new methods
+- Added troubleshooting guide for common issues
+
+---
+
+## Version 1.0.0 (October 31, 2025)
 **Release Date**: November 1, 2025  
 **Branch**: `main`  
 **Build**: `feature/pan-zoom-fix` (in development)
