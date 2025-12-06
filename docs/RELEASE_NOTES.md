@@ -1,6 +1,54 @@
 # ColoringApp Release Notes
 
-# ColoringApp Release Notes
+## Version 1.2.0 (November 1, 2025)
+
+### 🎨 Major New Features
+
+#### Brush Tool (Free-Hand Drawing)
+- **Dual Drawing Modes**: Switch between Fill and Brush modes instantly
+  - Fill Mode: Traditional flood-fill for quick region coloring
+  - Brush Mode: Free-hand drawing for coloring details and small areas
+- **Fixed Size**: Optimized 15-pixel brush size perfect for coloring
+- **Smooth Drawing**: Drag gesture detection for continuous strokes
+- **Smart Undo**: Each brush stroke treated as single action
+
+#### Enhanced Color Picker
+- **Color History**: Automatically tracks last 10 used colors
+- **Quick Selection**: Tap recent colors for instant reuse
+- **Smart Deduplication**: Prevents duplicate colors in history
+- **Visual Display**: Recent colors shown as circular swatches above picker
+
+#### Advanced Undo/Redo System
+- **Action Metadata**: Each state includes descriptive labels and timestamps
+- **History Foundation**: Infrastructure for future undo/redo preview UI
+- **Per-Action Undo**: Brush strokes and fills as complete units
+- **Unlimited History**: Undo back to initial image state
+
+### 🎨 UI Enhancements
+- **Mode Toggle Button**: Visual indicator for Fill/Brush mode (highlights in blue)
+- **Color History Row**: Shows "Recent:" label with up to 10 color swatches
+- **Compact Controls**: All controls fit on one row without overflow
+- **Improved Layout**: Better icon spacing and organization
+
+### 🔧 Technical Improvements
+- **Drag Gesture Detection**: Smooth brush drawing with coordinate transformation
+- **Memory Optimization**: Efficient bitmap handling for brush operations
+- **State Management**: Enhanced StateFlow architecture for new features
+- **Coordinate System**: Accurate transformation pipeline for zoom/pan/brush
+- **Real-time Rendering**: Fast brush circle drawing with anti-aliasing
+
+### 📚 Documentation
+- Added comprehensive [BRUSH_AND_ENHANCED_FEATURES.md](BRUSH_AND_ENHANCED_FEATURES.md)
+- Updated README with new features and usage instructions
+- Enhanced API reference documentation
+- Added testing checklist for new features
+
+### 🐛 Bug Fixes
+- Improved coordinate transformation for zoomed/panned canvas
+- Better memory management during continuous drawing
+- Fixed undo/redo state synchronization
+
+---
 
 ## Version 1.1.0 (November 1, 2025)
 

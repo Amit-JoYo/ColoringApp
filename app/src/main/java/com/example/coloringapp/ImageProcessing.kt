@@ -38,9 +38,11 @@ private fun isGrayscale(bitmap: Bitmap): Boolean {
 }
 
 /**
- * Processes a bitmap image.
+ * Processes a bitmap image for coloring.
  * If the image is black & white, it's returned as is.
- * If the image is colorful, it's segmented into distinct color regions using k-means clustering.
+ * If the image is colorful, it's converted to a coloring book style:
+ * - Clear black outlines/edges
+ * - White background for coloring
  */
 fun segmentImageByColor(bitmap: Bitmap): Bitmap {
     // First, check if the image is already black and white (grayscale)
@@ -49,64 +51,146 @@ fun segmentImageByColor(bitmap: Bitmap): Bitmap {
         return bitmap
     }
 
-    // --- K-Means Color Segmentation for color images ---
+    // --- Convert color image to coloring book style (black lines on white) ---
 
-    // 1. Convert the input Bitmap to an OpenCV Mat
-    val mat = Mat()
-    Utils.bitmapToMat(bitmap, mat)
-    // Convert from RGBA (from bitmap) to BGR for processing
-    Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR)
-
-
-    // 2. Reshape the image Mat to be a list of pixels (samples)
-    // This creates a Mat with 3 columns (for B, G, R) and one row for each pixel
-    val samples = mat.reshape(3, mat.cols() * mat.rows())
-    val samples32f = Mat()
-    // Convert the data type to 32-bit float for k-means
-    samples.convertTo(samples32f, CvType.CV_32F, 1.0 / 255.0)
-
-    // 3. Define the termination criteria for the k-means algorithm
-    val term = TermCriteria(TermCriteria.EPS + TermCriteria.MAX_ITER, 10, 1.0)
-
-    // These will hold the output of the k-means algorithm
-    val labels = Mat() // Will store the cluster index for each pixel
-    val centers = Mat() // Will store the center color of each cluster
-
-    // Define the number of color clusters to find
-    val k = 16 // Increased K for more detail
-
-    // 4. Apply the k-means algorithm
-    Core.kmeans(samples32f, k, labels, term, 3, Core.KMEANS_PP_CENTERS, centers)
-
-    // 5. Reconstruct the segmented image from the k-means results
-    // Convert the center colors back to the 8-bit BGR color space
-    centers.convertTo(centers, CvType.CV_8UC1, 255.0)
-    // Reshape centers to be a k x 1 matrix with 3 channels
-    centers.reshape(3, k)
-
-    val labelsInt = IntArray(labels.rows() * labels.cols())
-    labels.get(0, 0, labelsInt)
-
-    val newMatData = ByteArray(mat.rows() * mat.cols() * 3)
-
-    // For each pixel, find its cluster's center color and assign it
-    for (i in labelsInt.indices) {
-        val clusterId = labelsInt[i]
-        val center = centers.get(clusterId, 0)
-        newMatData[i * 3] = center[0].toInt().toByte()     // Blue
-        newMatData[i * 3 + 1] = center[1].toInt().toByte() // Green
-        newMatData[i * 3 + 2] = center[2].toInt().toByte() // Red
+    try {
+        // 1. Convert the input Bitmap to an OpenCV Mat
+        val mat = Mat()
+        Utils.bitmapToMat(bitmap, mat)
+        
+        // 2. Convert to grayscale first
+        val grayMat = Mat()
+        Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGBA2GRAY)
+        
+        // 3. Calculate image statistics for dynamic threshold adjustment
+        val meanMat = org.opencv.core.MatOfDouble()
+        val stdDevMat = org.opencv.core.MatOfDouble()
+        Core.meanStdDev(grayMat, meanMat, stdDevMat)
+        val stdDevValue = stdDevMat.get(0, 0)[0]
+        val meanValue = meanMat.get(0, 0)[0]
+        
+        // Calculate median using histogram (for better robustness to outliers)
+        val hist = Mat()
+        Imgproc.calcHist(
+            listOf(grayMat),
+            org.opencv.core.MatOfInt(0),
+            Mat(),
+            hist,
+            org.opencv.core.MatOfInt(256),
+            org.opencv.core.MatOfFloat(0f, 256f)
+        )
+        
+        var count = 0.0
+        var medianValue = 128.0
+        val halfPixels = (grayMat.rows() * grayMat.cols()) / 2.0
+        for (i in 0 until 256) {
+            count += hist.get(i, 0)[0]
+            if (count >= halfPixels) {
+                medianValue = i.toDouble()
+                break
+            }
+        }
+        
+        // Dynamic threshold calculation based on image characteristics
+        // Lower threshold = 0.5 * median (adjusted by std dev)
+        // Higher threshold = 2.5 * lower threshold
+        val lowerThreshold = kotlin.math.max(20.0, kotlin.math.min(50.0, 
+            0.5 * medianValue * (1.0 + stdDevValue / 128.0)))
+        val upperThreshold = 2.5 * lowerThreshold
+        
+        android.util.Log.d("ImageProcessing", 
+            "Dynamic thresholds: lower=$lowerThreshold, upper=$upperThreshold (median=$medianValue, stdDev=$stdDevValue)")
+        
+        // 4. Apply bilateral filter to reduce noise while preserving edges
+        val filtered = Mat()
+        Imgproc.bilateralFilter(grayMat, filtered, 9, 100.0, 100.0)
+        
+        // 5. Apply slight Gaussian blur for smoother edge detection
+        val blurred = Mat()
+        Imgproc.GaussianBlur(filtered, blurred, org.opencv.core.Size(3.0, 3.0), 0.0)
+        
+        // 6. Detect edges using Canny algorithm with dynamic thresholds
+        val edges = Mat()
+        Imgproc.Canny(blurred, edges, lowerThreshold, upperThreshold)
+        
+        // Clean up temporary mats
+        stdDevMat.release()
+        meanMat.release()
+        hist.release()
+        
+        // 7. Dilate edges to make them thicker and more visible
+        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, org.opencv.core.Size(3.0, 3.0))
+        val dilated = Mat()
+        Imgproc.dilate(edges, dilated, kernel)
+        
+        // 8. Invert to get black lines on white background (coloring book style)
+        val inverted = Mat()
+        Core.bitwise_not(dilated, inverted)
+        
+        // 9. Apply threshold to ensure pure white background and black lines
+        val thresholded = Mat()
+        Imgproc.threshold(inverted, thresholded, 240.0, 255.0, Imgproc.THRESH_BINARY)
+        
+        // 10. Convert back to RGBA for bitmap
+        val resultMat = Mat()
+        Imgproc.cvtColor(thresholded, resultMat, Imgproc.COLOR_GRAY2RGBA)
+        
+        // 11. Convert back to Bitmap
+        val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(resultMat, resultBitmap)
+        
+        // Clean up all Mat objects
+        mat.release()
+        grayMat.release()
+        filtered.release()
+        blurred.release()
+        edges.release()
+        kernel.release()
+        dilated.release()
+        inverted.release()
+        thresholded.release()
+        resultMat.release()
+        
+        return resultBitmap
+    } catch (e: Exception) {
+        // If processing fails, return a simple threshold conversion
+        android.util.Log.e("ImageProcessing", "Error processing colored image: ${e.message}")
+        
+        // Fallback: Simple grayscale + threshold
+        try {
+            val mat = Mat()
+            Utils.bitmapToMat(bitmap, mat)
+            val grayMat = Mat()
+            Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGBA2GRAY)
+            
+            // Apply adaptive threshold for better line detection
+            val thresholded = Mat()
+            Imgproc.adaptiveThreshold(
+                grayMat, 
+                thresholded, 
+                255.0, 
+                Imgproc.ADAPTIVE_THRESH_MEAN_C, 
+                Imgproc.THRESH_BINARY, 
+                11, 
+                2.0
+            )
+            
+            val resultMat = Mat()
+            Imgproc.cvtColor(thresholded, resultMat, Imgproc.COLOR_GRAY2RGBA)
+            
+            val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+            Utils.matToBitmap(resultMat, resultBitmap)
+            
+            mat.release()
+            grayMat.release()
+            thresholded.release()
+            resultMat.release()
+            
+            return resultBitmap
+        } catch (fallbackError: Exception) {
+            android.util.Log.e("ImageProcessing", "Fallback also failed: ${fallbackError.message}")
+            // Last resort: return original bitmap
+            return bitmap
+        }
     }
-
-    // Create a new Mat for the result and populate it with the segmented color data
-    val newMat = Mat(mat.size(), CvType.CV_8UC3)
-    newMat.put(0, 0, newMatData)
-
-    // 6. Convert the processed Mat back to a Bitmap to be displayed
-    val resultBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    // Convert from BGR back to RGBA for the bitmap
-    Imgproc.cvtColor(newMat, newMat, Imgproc.COLOR_BGR2RGBA)
-    Utils.matToBitmap(newMat, resultBitmap)
-
-    return resultBitmap
 }
