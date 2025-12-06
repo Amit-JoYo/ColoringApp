@@ -50,20 +50,48 @@ val brushSize: StateFlow<Float> = _brushSize
 // Brush drawing method
 fun brushDraw(x: Int, y: Int) {
     _imageBitmap.value?.let { bitmap ->
-        val mutableBitmap = bitmap.copy(bitmap.config, true)
-        val canvas = android.graphics.Canvas(mutableBitmap)
+        // Draw directly on the existing bitmap
+        val canvas = android.graphics.Canvas(bitmap)
         val paint = android.graphics.Paint().apply {
-            color = _selectedColor.value.toArgb()
+            color = android.graphics.Color.argb(
+                (_selectedColor.value.alpha * 255).toInt(),
+                (_selectedColor.value.red * 255).toInt(),
+                (_selectedColor.value.green * 255).toInt(),
+                (_selectedColor.value.blue * 255).toInt()
+            )
             isAntiAlias = true
-            style = android.graphics.Paint.Style.FILL
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 30f // Diameter of the circle (2 * 15f)
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
         }
-        canvas.drawCircle(x.toFloat(), y.toFloat(), _brushSize.value, paint)
-        _imageBitmap.value = mutableBitmap
+        
+        val currentX = x.toFloat()
+        val currentY = y.toFloat()
+
+        if (lastBrushX != null && lastBrushY != null) {
+            // Draw line from last point to current point for smooth continuity
+            canvas.drawLine(lastBrushX!!, lastBrushY!!, currentX, currentY, paint)
+        } else {
+            // First point - just draw a dot
+            canvas.drawLine(currentX, currentY, currentX, currentY, paint)
+        }
+        
+        // Update last position
+        lastBrushX = currentX
+        lastBrushY = currentY
+        
+        // Trigger UI update
+        _imageBitmap.value = bitmap
     }
 }
 
 // Start a new brush stroke for undo management
 fun startBrushStroke() {
+    // Reset last brush position for new stroke
+    lastBrushX = null
+    lastBrushY = null
+
     _imageBitmap.value?.let {
         undoStack.add(UndoState(it.copy(it.config, true), "Brush Stroke", System.currentTimeMillis()))
         redoStack.clear()

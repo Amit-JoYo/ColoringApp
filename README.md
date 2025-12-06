@@ -1,5 +1,7 @@
 # Coloring Book App
 
+**Latest Version: v1.4.0**
+
 A feature-rich coloring book app for Android that allows users to select an image, convert it into a line drawing, and color it using both flood-fill and free-hand brush tools. Save and share your creations!
 
 ## Features

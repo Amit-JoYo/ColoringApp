@@ -1,5 +1,10 @@
 # ColoringApp Release Notes
 
+## Version 1.4.0 (December 6, 2025)
+
+### 🐛 Bug Fixes
+- **Brush Tool Continuity**: Fixed a critical issue where rapid brush movements resulted in disconnected dots. The brush tool now uses line interpolation to ensure smooth, continuous strokes regardless of drawing speed.
+
 ## Version 1.2.0 (November 1, 2025)
 
 ### 🎨 Major New Features
