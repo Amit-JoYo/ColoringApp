@@ -1,5 +1,34 @@
 # ColoringApp Release Notes
 
+## Version 1.5.0 (December 28, 2025)
+
+### 🧩 Major New Feature: Jigsaw Puzzle Mode
+
+A brand new puzzle game mode has been added! Transform your colored images into interactive jigsaw puzzles.
+
+#### Key Features:
+- **Interlocking Pieces**: Authentic jigsaw puzzle pieces with tabs and slots that fit together
+- **Adaptive Grid**: Pieces are kept approximately square regardless of image aspect ratio
+- **Adjustable Difficulty**: Grid size slider controls the number of pieces (4-100+ pieces)
+- **Smooth Bezier Curves**: Tabs and slots use quadratic bezier curves for clean, natural shapes
+- **Drag & Drop**: Intuitive touch controls for moving pieces
+- **Snap-to-Place**: Pieces automatically snap when placed within threshold of correct position
+- **Reference Image**: Semi-transparent background shows the target image for guidance
+- **Victory Detection**: Celebration when all pieces are correctly placed
+
+#### Technical Implementation:
+- **Edge Pattern Generation**: Randomized TAB/SLOT assignment ensuring proper interlocking
+- **Bitmap Expansion**: Pieces with tabs are automatically expanded to include the protruding area
+- **Target Position Offsets**: Accounts for tab expansion when calculating correct piece positions
+- **Quadratic Bezier Paths**: Smooth curves for both tabs (protruding) and slots (indented)
+
+### 🎨 UI Improvements
+- New app icon for the ColoringApp
+- Jigsaw puzzle option in puzzle type selector
+- Improved puzzle piece rendering with anti-aliased edges
+
+---
+
 ## Version 1.4.0 (December 6, 2025)
 
 ### 🐛 Bug Fixes

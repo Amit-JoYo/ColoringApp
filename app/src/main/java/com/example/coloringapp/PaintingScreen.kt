@@ -68,7 +68,11 @@ import androidx.compose.material3.SnackbarDuration
 import android.widget.Toast
 
 @Composable
-fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
+fun PaintingScreen(
+    viewModel: PaintingViewModel = viewModel(),
+    onPuzzleMode: () -> Unit = {},
+    onPuzzleFromBitmap: (Bitmap) -> Unit = {}
+) {
     val imageBitmap by viewModel.imageBitmap.collectAsState()
     val imageSessionId by viewModel.imageSessionId.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -111,7 +115,8 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
                 onImageSelected = { },
                 onWebSearchRequested = { query ->
                     viewModel.startWebSearch(query)
-                }
+                },
+                onPuzzleMode = onPuzzleMode
             )
         } else {
             PaintingCanvas(
@@ -121,7 +126,8 @@ fun PaintingScreen(viewModel: PaintingViewModel = viewModel()) {
                 scale = scale,
                 offset = offset,
                 onScaleChange = { scale = it },
-                onOffsetChange = { offset = it }
+                onOffsetChange = { offset = it },
+                onPuzzleRequested = onPuzzleFromBitmap
             )
         }
         if (isLoading) {
@@ -148,7 +154,8 @@ fun PaintingCanvas(
     scale: Float,
     offset: Offset,
     onScaleChange: (Float) -> Unit,
-    onOffsetChange: (Offset) -> Unit
+    onOffsetChange: (Offset) -> Unit,
+    onPuzzleRequested: (Bitmap) -> Unit = {}
 ) {
     // Context for accessing system services
     val context = LocalContext.current
@@ -358,6 +365,7 @@ fun PaintingCanvas(
                         context.startActivity(Intent.createChooser(shareIntent, "Share your artwork"))
                     }
                 },
+                onPuzzle = { onPuzzleRequested(bitmap) },
                 canUndo = canUndo,
                 canRedo = canRedo,
                 isSaving = saveStatus is SaveStatus.Saving,
@@ -426,6 +434,7 @@ fun PaintingControls(
     onFitToScreen: () -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
+    onPuzzle: () -> Unit,
     canUndo: Boolean,
     canRedo: Boolean,
     isSaving: Boolean = false,
@@ -490,6 +499,12 @@ fun PaintingControls(
             Icon(
                 painter = painterResource(id = R.drawable.ic_share),
                 contentDescription = "Share"
+            )
+        }
+        IconButton(onClick = onPuzzle) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_puzzle),
+                contentDescription = "Make Puzzle"
             )
         }
     }

@@ -1,8 +1,8 @@
 # Coloring Book App
 
-**Latest Version: v1.4.0**
+**Latest Version: v1.5.0**
 
-A feature-rich coloring book app for Android that allows users to select an image, convert it into a line drawing, and color it using both flood-fill and free-hand brush tools. Save and share your creations!
+A feature-rich coloring book app for Android that allows users to select an image, convert it into a line drawing, and color it using both flood-fill and free-hand brush tools. Transform your artwork into interactive puzzles! Save and share your creations!
 
 ## Features
 
@@ -13,12 +13,25 @@ A feature-rich coloring book app for Android that allows users to select an imag
 - **Color Palette:** A honeycomb color picker with color history (last 10 colors).
 - **Two Drawing Modes:**
   - **Flood Fill:** Tap to fill entire regions with color (traditional coloring)
-  - **Brush Tool:** Free-hand drawing for detailed work (NEW in v1.2.0)
-- **Adjustable Brush Size:** 5-100 pixels with real-time slider (NEW in v1.2.0)
-- **Save to Gallery:** Save your colored artwork to your device (NEW in v1.1.0)
-- **Share:** Share your creations with friends and family (NEW in v1.1.0)
-- **Undo/Redo:** Advanced undo/redo with action tracking (Enhanced in v1.2.0)
+  - **Brush Tool:** Free-hand drawing for detailed work
+- **Adjustable Brush Size:** 5-100 pixels with real-time slider
+- **Puzzle Games:** Transform your colored artwork into puzzles!
+  - **Sliding Puzzle:** Classic tile-sliding puzzle
+  - **Jigsaw Puzzle:** Interlocking pieces with tabs and slots (NEW in v1.5.0)
+- **Save to Gallery:** Save your colored artwork to your device
+- **Share:** Share your creations with friends and family
+- **Undo/Redo:** Advanced undo/redo with action tracking
 - **Back Navigation:** Navigate back to the image selection screen.
+
+### What's New in v1.5.0
+- 🧩 **Jigsaw Puzzle Mode:** Transform your artwork into authentic jigsaw puzzles
+- 🔗 **Interlocking Pieces:** Tabs and slots that fit together naturally
+- 📐 **Adaptive Grid:** Pieces stay approximately square for any image aspect ratio
+- 🎯 **Snap-to-Place:** Pieces snap when placed correctly
+- 🖼️ **New App Icon:** Fresh new look for the app
+
+### What's New in v1.4.0
+- 🖌️ **Brush Tool Continuity:** Fixed disconnected dots during rapid brush movements
 
 ### What's New in v1.2.0
 - 🎨 **Brush Tool:** Draw freely with adjustable brush size

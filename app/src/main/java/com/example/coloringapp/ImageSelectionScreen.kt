@@ -30,7 +30,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun ImageSelectionScreen(
     viewModel: PaintingViewModel = viewModel(), 
     onImageSelected: () -> Unit,
-    onWebSearchRequested: (String) -> Unit
+    onWebSearchRequested: (String) -> Unit,
+    onPuzzleMode: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showSearchDialog by remember { mutableStateOf(false) }
@@ -70,6 +71,17 @@ fun ImageSelectionScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Puzzle Mode FAB
+                FloatingActionButton(
+                    onClick = onPuzzleMode,
+                    containerColor = MaterialTheme.colorScheme.tertiary
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_puzzle),
+                        contentDescription = "Puzzle Mode"
+                    )
+                }
+                
                 // Web Search FAB
                 FloatingActionButton(
                     onClick = { showSearchDialog = true },

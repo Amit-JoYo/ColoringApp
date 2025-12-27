@@ -1,5 +1,6 @@
 package com.example.coloringapp
 
+import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,9 +15,21 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.opencv.android.OpenCVLoader
 import android.util.Log
+
+/**
+ * Enum representing the current screen in the app.
+ */
+enum class AppScreen {
+    MAIN,           // Main painting flow
+    PUZZLE,         // Puzzle mode
+    PUZZLE_FROM_PAINTING  // Puzzle from painted image
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,8 +47,16 @@ class MainActivity : ComponentActivity() {
                 val originalBitmap by viewModel.originalBitmap.collectAsState()
                 val webSearchQuery by viewModel.webSearchQuery.collectAsState()
 
-                BackHandler(enabled = isPaintingScreen != null || showAdjustment || webSearchQuery != null) {
+                // Track current screen
+                var currentScreen by remember { mutableStateOf(AppScreen.MAIN) }
+                var puzzleBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+                BackHandler(enabled = currentScreen != AppScreen.MAIN || isPaintingScreen != null || showAdjustment || webSearchQuery != null) {
                     when {
+                        currentScreen == AppScreen.PUZZLE || currentScreen == AppScreen.PUZZLE_FROM_PAINTING -> {
+                            currentScreen = AppScreen.MAIN
+                            puzzleBitmap = null
+                        }
                         webSearchQuery != null -> viewModel.cancelWebSearch()
                         showAdjustment -> viewModel.cancelAdjustment()
                         else -> viewModel.clearImage()
@@ -47,32 +68,54 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when {
-                        webSearchQuery != null -> {
-                            WebImageSearchScreen(
-                                searchQuery = webSearchQuery!!,
-                                onImageSelected = { bitmap ->
-                                    viewModel.cancelWebSearch()
-                                    viewModel.setImageBitmap(bitmap)
-                                },
+                    when (currentScreen) {
+                        AppScreen.PUZZLE, AppScreen.PUZZLE_FROM_PAINTING -> {
+                            PuzzleScreen(
+                                initialBitmap = puzzleBitmap,
                                 onBack = {
-                                    viewModel.cancelWebSearch()
+                                    currentScreen = AppScreen.MAIN
+                                    puzzleBitmap = null
                                 }
                             )
                         }
-                        showAdjustment && originalBitmap != null -> {
-                            ImageAdjustmentScreen(
-                                originalBitmap = originalBitmap!!,
-                                onApply = { adjustedBitmap ->
-                                    viewModel.applyAdjustedBitmap(adjustedBitmap)
-                                },
-                                onCancel = {
-                                    viewModel.cancelAdjustment()
+                        AppScreen.MAIN -> {
+                            when {
+                                webSearchQuery != null -> {
+                                    WebImageSearchScreen(
+                                        searchQuery = webSearchQuery!!,
+                                        onImageSelected = { bitmap ->
+                                            viewModel.cancelWebSearch()
+                                            viewModel.setImageBitmap(bitmap)
+                                        },
+                                        onBack = {
+                                            viewModel.cancelWebSearch()
+                                        }
+                                    )
                                 }
-                            )
-                        }
-                        else -> {
-                            PaintingScreen(viewModel)
+                                showAdjustment && originalBitmap != null -> {
+                                    ImageAdjustmentScreen(
+                                        originalBitmap = originalBitmap!!,
+                                        onApply = { adjustedBitmap ->
+                                            viewModel.applyAdjustedBitmap(adjustedBitmap)
+                                        },
+                                        onCancel = {
+                                            viewModel.cancelAdjustment()
+                                        }
+                                    )
+                                }
+                                else -> {
+                                    PaintingScreen(
+                                        viewModel = viewModel,
+                                        onPuzzleMode = {
+                                            currentScreen = AppScreen.PUZZLE
+                                        },
+                                        onPuzzleFromBitmap = { bitmap ->
+                                            puzzleBitmap = bitmap
+                                            currentScreen = AppScreen.PUZZLE_FROM_PAINTING
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
