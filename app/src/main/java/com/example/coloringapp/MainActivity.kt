@@ -28,7 +28,8 @@ import android.util.Log
 enum class AppScreen {
     MAIN,           // Main painting flow
     PUZZLE,         // Puzzle mode
-    PUZZLE_FROM_PAINTING  // Puzzle from painted image
+    PUZZLE_FROM_PAINTING,  // Puzzle from painted image
+    SETTINGS        // Settings screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = currentScreen != AppScreen.MAIN || isPaintingScreen != null || showAdjustment || webSearchQuery != null) {
                     when {
-                        currentScreen == AppScreen.PUZZLE || currentScreen == AppScreen.PUZZLE_FROM_PAINTING -> {
+                        currentScreen == AppScreen.PUZZLE || currentScreen == AppScreen.PUZZLE_FROM_PAINTING || currentScreen == AppScreen.SETTINGS -> {
                             currentScreen = AppScreen.MAIN
                             puzzleBitmap = null
                         }
@@ -69,6 +70,11 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     when (currentScreen) {
+                        AppScreen.SETTINGS -> {
+                            SettingsScreen(
+                                onBack = { currentScreen = AppScreen.MAIN }
+                            )
+                        }
                         AppScreen.PUZZLE, AppScreen.PUZZLE_FROM_PAINTING -> {
                             PuzzleScreen(
                                 initialBitmap = puzzleBitmap,
@@ -83,6 +89,7 @@ class MainActivity : ComponentActivity() {
                                 webSearchQuery != null -> {
                                     WebImageSearchScreen(
                                         searchQuery = webSearchQuery!!,
+                                        searchMode = ImageSearchMode.COLORING_PAGE,  // Painting needs coloring pages
                                         onImageSelected = { bitmap ->
                                             viewModel.cancelWebSearch()
                                             viewModel.setImageBitmap(bitmap)
@@ -112,6 +119,9 @@ class MainActivity : ComponentActivity() {
                                         onPuzzleFromBitmap = { bitmap ->
                                             puzzleBitmap = bitmap
                                             currentScreen = AppScreen.PUZZLE_FROM_PAINTING
+                                        },
+                                        onSettings = {
+                                            currentScreen = AppScreen.SETTINGS
                                         }
                                     )
                                 }

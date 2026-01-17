@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,6 +35,17 @@ class PaintingViewModel : ViewModel() {
     // Original bitmap before processing (for adjustment)
     private val _originalBitmap = MutableStateFlow<Bitmap?>(null)
     val originalBitmap = _originalBitmap.asStateFlow()
+
+    // Line mask layer - contains only the black lines (for overlay rendering)
+    private val _lineMask = MutableStateFlow<Bitmap?>(null)
+    val lineMask = _lineMask.asStateFlow()
+
+    // Color layer - where painting happens (rendered behind lines)
+    private val _colorLayer = MutableStateFlow<Bitmap?>(null)
+    val colorLayer = _colorLayer.asStateFlow()
+
+    // Threshold for what's considered a "line" (dark pixel) - pixels darker than this are lines
+    private val lineThreshold = 200
 
     // Whether to show adjustment screen
     private val _showAdjustment = MutableStateFlow(false)
@@ -90,6 +102,82 @@ class PaintingViewModel : ViewModel() {
         R.drawable.coloring_page_6
     )
 
+    /**
+     * Extract line mask from a grayscale coloring page image.
+     * Dark pixels (below threshold) become opaque black lines.
+     * Light pixels become transparent.
+     */
+    private fun extractLineMask(bitmap: Bitmap): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        val maskPixels = IntArray(width * height)
+        
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            val r = android.graphics.Color.red(pixel)
+            val g = android.graphics.Color.green(pixel)
+            val b = android.graphics.Color.blue(pixel)
+            
+            // Calculate luminance (brightness)
+            val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+            
+            if (luminance < lineThreshold) {
+                // This is a line pixel - keep it as opaque black
+                // Use the original darkness level for anti-aliasing
+                val alpha = 255 - luminance // Darker = more opaque
+                maskPixels[i] = android.graphics.Color.argb(alpha.coerceIn(0, 255), 0, 0, 0)
+            } else {
+                // This is a white/light pixel - make it transparent
+                maskPixels[i] = android.graphics.Color.TRANSPARENT
+            }
+        }
+        
+        val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        mask.setPixels(maskPixels, 0, width, 0, 0, width, height)
+        return mask
+    }
+
+    /**
+     * Create a white color layer of the same size as the source image
+     */
+    private fun createColorLayer(width: Int, height: Int): Bitmap {
+        val colorLayer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        colorLayer.eraseColor(android.graphics.Color.WHITE)
+        return colorLayer
+    }
+
+    /**
+     * Composite the color layer and line mask into the display bitmap
+     */
+    private fun compositeLayersInternal(): Bitmap? {
+        val colorLayer = _colorLayer.value ?: return null
+        val lineMask = _lineMask.value ?: return colorLayer.copy(colorLayer.config, true)
+        
+        val result = colorLayer.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = android.graphics.Canvas(result)
+        canvas.drawBitmap(lineMask, 0f, 0f, null)
+        return result
+    }
+
+    /**
+     * Update the display bitmap by compositing layers
+     */
+    private fun updateDisplayBitmap() {
+        _imageBitmap.value = compositeLayersInternal()
+    }
+
+    /**
+     * Initialize layers from a coloring page bitmap
+     */
+    private fun initializeLayers(bitmap: Bitmap) {
+        _lineMask.value = extractLineMask(bitmap)
+        _colorLayer.value = createColorLayer(bitmap.width, bitmap.height)
+        updateDisplayBitmap()
+    }
+
     fun setImageBitmap(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
             _isLoading.value = true
@@ -103,11 +191,13 @@ class PaintingViewModel : ViewModel() {
                 _showAdjustment.value = true
                 _isLoading.value = false
             } else {
-                // Grayscale image - use directly
-                _imageBitmap.value = bitmap
+                // Grayscale image - initialize layers
+                initializeLayers(bitmap)
                 undoStack.clear()
                 redoStack.clear()
-                undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
+                _colorLayer.value?.let { colorLayer ->
+                    undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Initial", System.currentTimeMillis()))
+                }
                 updateUndoRedoStates()
                 _imageSessionId.value++
                 _isLoading.value = false
@@ -122,11 +212,13 @@ class PaintingViewModel : ViewModel() {
             options.inMutable = true
             val bitmap = android.graphics.BitmapFactory.decodeResource(context.resources, drawableId, options)
             
-            // Pre-loaded images are already grayscale, use directly
-            _imageBitmap.value = bitmap
+            // Pre-loaded images are already grayscale - initialize layers
+            initializeLayers(bitmap)
             undoStack.clear()
             redoStack.clear()
-            undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
+            _colorLayer.value?.let { colorLayer ->
+                undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Initial", System.currentTimeMillis()))
+            }
             updateUndoRedoStates()
             _imageSessionId.value++
             _isLoading.value = false
@@ -138,10 +230,13 @@ class PaintingViewModel : ViewModel() {
      */
     fun applyAdjustedBitmap(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.Default) {
-            _imageBitmap.value = bitmap
+            // Initialize layers from the adjusted (now grayscale) image
+            initializeLayers(bitmap)
             undoStack.clear()
             redoStack.clear()
-            undoStack.add(UndoState(bitmap.copy(bitmap.config, true), "Initial", System.currentTimeMillis()))
+            _colorLayer.value?.let { colorLayer ->
+                undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Initial", System.currentTimeMillis()))
+            }
             updateUndoRedoStates()
             _imageSessionId.value++
             _showAdjustment.value = false
@@ -213,63 +308,177 @@ class PaintingViewModel : ViewModel() {
 
     fun clearImage() {
         _imageBitmap.value = null
+        _lineMask.value = null
+        _colorLayer.value = null
         undoStack.clear()
         redoStack.clear()
         updateUndoRedoStates()
     }
 
+    /**
+     * Check if a pixel at (x, y) is a line pixel (should not be painted)
+     */
+    private fun isLinePixel(x: Int, y: Int): Boolean {
+        val lineMask = _lineMask.value ?: return false
+        if (x < 0 || x >= lineMask.width || y < 0 || y >= lineMask.height) return false
+        val pixel = lineMask.getPixel(x, y)
+        // If alpha > 0, it's a line pixel
+        return android.graphics.Color.alpha(pixel) > 50
+    }
+
     fun startFloodFill(x: Int, y: Int) {
         viewModelScope.launch(Dispatchers.Default) {
-            _imageBitmap.value?.let {
-                val currentBitmap = it.copy(it.config, true)
-                undoStack.add(UndoState(currentBitmap, "Fill", System.currentTimeMillis()))
-                redoStack.clear()
-                val newBitmap = floodFill(it, x, y, _selectedColor.value)
-                _imageBitmap.value = newBitmap
-                updateUndoRedoStates()
-            }
+            val colorLayer = _colorLayer.value ?: return@launch
+            val lineMask = _lineMask.value
+            
+            // Don't fill if clicked on a line
+            if (isLinePixel(x, y)) return@launch
+            
+            // Save current color layer for undo
+            undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Fill", System.currentTimeMillis()))
+            redoStack.clear()
+            
+            // Flood fill on the color layer, respecting line boundaries
+            val newColorLayer = floodFillWithMask(colorLayer, lineMask, x, y, _selectedColor.value)
+            _colorLayer.value = newColorLayer
+            
+            // Update display bitmap
+            updateDisplayBitmap()
+            updateUndoRedoStates()
         }
     }
 
     /**
-     * Draw with brush at specified coordinates
+     * Flood fill that respects line mask boundaries
+     */
+    private suspend fun floodFillWithMask(
+        colorLayer: Bitmap,
+        lineMask: Bitmap?,
+        x: Int,
+        y: Int,
+        newColor: Color,
+        tolerance: Int = 30
+    ): Bitmap = withContext(Dispatchers.Default) {
+        val width = colorLayer.width
+        val height = colorLayer.height
+        val pixels = IntArray(width * height)
+        colorLayer.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        // Get line mask pixels if available
+        val maskPixels = if (lineMask != null) {
+            IntArray(width * height).also { lineMask.getPixels(it, 0, width, 0, 0, width, height) }
+        } else null
+        
+        val targetColor = pixels[y * width + x]
+        val newColorArgb = newColor.toArgb()
+        
+        // If the target color is already the new color, do nothing
+        if (areColorsSimilar(targetColor, newColorArgb, tolerance)) {
+            return@withContext colorLayer
+        }
+        
+        val queue = java.util.LinkedList<Pair<Int, Int>>()
+        queue.add(x to y)
+        val visited = HashSet<Int>()
+        
+        while (queue.isNotEmpty()) {
+            val (px, py) = queue.poll()!!
+            val pixelOffset = py * width + px
+            
+            if (px in 0 until width && py in 0 until height && !visited.contains(pixelOffset)) {
+                visited.add(pixelOffset)
+                
+                // Skip if this is a line pixel
+                if (maskPixels != null && android.graphics.Color.alpha(maskPixels[pixelOffset]) > 50) {
+                    continue
+                }
+                
+                // Check if the current pixel is similar to the target color
+                if (areColorsSimilar(pixels[pixelOffset], targetColor, tolerance)) {
+                    // Change the color
+                    pixels[pixelOffset] = newColorArgb
+                    
+                    // Add neighbors to the queue
+                    queue.add(px + 1 to py)
+                    queue.add(px - 1 to py)
+                    queue.add(px to py + 1)
+                    queue.add(px to py - 1)
+                }
+            }
+        }
+        
+        val newBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        newBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+        newBitmap
+    }
+
+    /**
+     * Helper function to check color similarity
+     */
+    private fun areColorsSimilar(color1: Int, color2: Int, tolerance: Int): Boolean {
+        if (tolerance == 0) return color1 == color2
+        val a1 = android.graphics.Color.alpha(color1)
+        val r1 = android.graphics.Color.red(color1)
+        val g1 = android.graphics.Color.green(color1)
+        val b1 = android.graphics.Color.blue(color1)
+
+        val a2 = android.graphics.Color.alpha(color2)
+        val r2 = android.graphics.Color.red(color2)
+        val g2 = android.graphics.Color.green(color2)
+        val b2 = android.graphics.Color.blue(color2)
+
+        return kotlin.math.abs(a1 - a2) <= tolerance &&
+               kotlin.math.abs(r1 - r2) <= tolerance &&
+               kotlin.math.abs(g1 - g2) <= tolerance &&
+               kotlin.math.abs(b1 - b2) <= tolerance
+    }
+
+    /**
+     * Draw with brush at specified coordinates (only on non-line areas)
      */
     fun brushDraw(x: Int, y: Int) {
-        _imageBitmap.value?.let { bitmap ->
-            // Draw directly on the existing bitmap (which is already mutable from startBrushStroke)
-            val canvas = android.graphics.Canvas(bitmap)
-            val paint = android.graphics.Paint().apply {
-                color = android.graphics.Color.argb(
-                    (_selectedColor.value.alpha * 255).toInt(),
-                    (_selectedColor.value.red * 255).toInt(),
-                    (_selectedColor.value.green * 255).toInt(),
-                    (_selectedColor.value.blue * 255).toInt()
-                )
-                isAntiAlias = true
-                style = android.graphics.Paint.Style.STROKE
-                strokeWidth = 30f // Diameter of the circle (2 * 15f)
-                strokeCap = android.graphics.Paint.Cap.ROUND
-                strokeJoin = android.graphics.Paint.Join.ROUND
-            }
-            
-            val currentX = x.toFloat()
-            val currentY = y.toFloat()
-
-            if (lastBrushX != null && lastBrushY != null) {
-                // Draw line from last point to current point
-                canvas.drawLine(lastBrushX!!, lastBrushY!!, currentX, currentY, paint)
-            } else {
-                // First point - just draw a dot
-                canvas.drawLine(currentX, currentY, currentX, currentY, paint)
-            }
-            
-            // Update last position
-            lastBrushX = currentX
-            lastBrushY = currentY
-            
-            // Force StateFlow update by creating a new reference
-            _imageBitmap.value = bitmap.copy(bitmap.config, true)
+        val colorLayer = _colorLayer.value ?: return
+        
+        // Skip if trying to draw on a line pixel
+        if (isLinePixel(x, y)) {
+            // Still update lastBrush position for smooth lines, just don't draw
+            lastBrushX = x.toFloat()
+            lastBrushY = y.toFloat()
+            return
         }
+        
+        val canvas = android.graphics.Canvas(colorLayer)
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.argb(
+                (_selectedColor.value.alpha * 255).toInt(),
+                (_selectedColor.value.red * 255).toInt(),
+                (_selectedColor.value.green * 255).toInt(),
+                (_selectedColor.value.blue * 255).toInt()
+            )
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 30f
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+        }
+        
+        val currentX = x.toFloat()
+        val currentY = y.toFloat()
+
+        if (lastBrushX != null && lastBrushY != null) {
+            // Draw line from last point to current point
+            canvas.drawLine(lastBrushX!!, lastBrushY!!, currentX, currentY, paint)
+        } else {
+            // First point - just draw a dot
+            canvas.drawLine(currentX, currentY, currentX, currentY, paint)
+        }
+        
+        // Update last position
+        lastBrushX = currentX
+        lastBrushY = currentY
+        
+        // Update display bitmap
+        updateDisplayBitmap()
     }
 
     /**
@@ -280,9 +489,9 @@ class PaintingViewModel : ViewModel() {
         lastBrushX = null
         lastBrushY = null
 
-        _imageBitmap.value?.let { currentBitmap ->
-            // Save the current state before starting the brush stroke
-            undoStack.add(UndoState(currentBitmap.copy(currentBitmap.config, true), "Brush Stroke", System.currentTimeMillis()))
+        _colorLayer.value?.let { colorLayer ->
+            // Save the current color layer state before starting the brush stroke
+            undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Brush Stroke", System.currentTimeMillis()))
             redoStack.clear()
             updateUndoRedoStates()
         }
@@ -291,11 +500,12 @@ class PaintingViewModel : ViewModel() {
     fun undo() {
         if (undoStack.size > 1) {
             val currentState = undoStack.removeAt(undoStack.size - 1)
-            _imageBitmap.value?.let {
-                redoStack.add(UndoState(it.copy(it.config, true), currentState.action, System.currentTimeMillis()))
+            _colorLayer.value?.let { colorLayer ->
+                redoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), currentState.action, System.currentTimeMillis()))
             }
             val previousState = undoStack.last()
-            _imageBitmap.value = previousState.bitmap.copy(previousState.bitmap.config, true)
+            _colorLayer.value = previousState.bitmap.copy(previousState.bitmap.config, true)
+            updateDisplayBitmap()
             updateUndoRedoStates()
         }
     }
@@ -303,10 +513,11 @@ class PaintingViewModel : ViewModel() {
     fun redo() {
         if (redoStack.isNotEmpty()) {
             val nextState = redoStack.removeAt(redoStack.size - 1)
-            _imageBitmap.value?.let {
-                undoStack.add(UndoState(it.copy(it.config, true), nextState.action, System.currentTimeMillis()))
+            _colorLayer.value?.let { colorLayer ->
+                undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), nextState.action, System.currentTimeMillis()))
             }
-            _imageBitmap.value = nextState.bitmap.copy(nextState.bitmap.config, true)
+            _colorLayer.value = nextState.bitmap.copy(nextState.bitmap.config, true)
+            updateDisplayBitmap()
             updateUndoRedoStates()
         }
     }

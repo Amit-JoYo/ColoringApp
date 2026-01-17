@@ -18,10 +18,19 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.net.URL
 
+/**
+ * Search mode for web image search
+ */
+enum class ImageSearchMode {
+    COLORING_PAGE,  // Search for black and white coloring pages
+    PHOTO           // Search for regular color photos (for puzzles)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WebImageSearchScreen(
     searchQuery: String,
+    searchMode: ImageSearchMode = ImageSearchMode.COLORING_PAGE,
     onImageSelected: (Bitmap) -> Unit,
     onBack: () -> Unit
 ) {
@@ -33,8 +42,20 @@ fun WebImageSearchScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     
-    val searchUrl = remember(searchQuery) {
-        "https://www.google.com/search?q=${android.net.Uri.encode(searchQuery)}+coloring+page+black+and+white&tbm=isch&tbs=ic:gray"
+    val searchUrl = remember(searchQuery, searchMode) {
+        when (searchMode) {
+            ImageSearchMode.COLORING_PAGE -> 
+                "https://www.google.com/search?q=${android.net.Uri.encode(searchQuery)}+coloring+page+black+and+white&tbm=isch&tbs=ic:gray"
+            ImageSearchMode.PHOTO -> 
+                "https://www.google.com/search?q=${android.net.Uri.encode(searchQuery)}&tbm=isch"
+        }
+    }
+    
+    val screenTitle = remember(searchMode) {
+        when (searchMode) {
+            ImageSearchMode.COLORING_PAGE -> "Search Coloring Pages"
+            ImageSearchMode.PHOTO -> "Search Photos"
+        }
     }
 
     Scaffold(
@@ -42,7 +63,7 @@ fun WebImageSearchScreen(
             TopAppBar(
                 title = { 
                     Column {
-                        Text("Search: $searchQuery")
+                        Text("$screenTitle: $searchQuery")
                         if (currentUrl.isNotEmpty()) {
                             Text(
                                 text = currentUrl.take(50) + if (currentUrl.length > 50) "..." else "",

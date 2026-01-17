@@ -17,9 +17,11 @@ import kotlin.math.roundToInt
 /**
  * Enum representing the type of puzzle game.
  */
-enum class PuzzleType(val displayName: String, val description: String) {
-    SLIDING("Sliding Puzzle", "Slide tiles to solve the puzzle"),
-    JIGSAW("Jigsaw Puzzle", "Drag pieces to their correct positions")
+enum class PuzzleType(val displayName: String, val description: String, val needsGridSize: Boolean = true) {
+    SLIDING("Sliding Puzzle", "Slide tiles to solve the puzzle", true),
+    JIGSAW("Jigsaw Puzzle", "Drag pieces to their correct positions", true),
+    COLOR_BY_NUMBER("Color by Number", "AI creates a coloring page - fill each region", false),
+    MEMORY_MATCH("Memory Match", "Find matching pairs of image tiles", true)
 }
 
 /**
@@ -90,74 +92,77 @@ fun PuzzleConfigDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Grid Size Slider
-                Text(
-                    text = "Grid Size",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                
-                val currentGridSize = gridSize.roundToInt()
-                val pieceCount = if (selectedType == PuzzleType.SLIDING) 
-                    currentGridSize * currentGridSize - 1 
-                else 
-                    currentGridSize * currentGridSize
-                val difficultyLabel = when {
-                    currentGridSize <= 4 -> "Easy"
-                    currentGridSize <= 6 -> "Medium"
-                    currentGridSize <= 10 -> "Hard"
-                    currentGridSize <= 16 -> "Expert"
-                    else -> "Master"
-                }
-                
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${currentGridSize}×${currentGridSize}",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Column(horizontalAlignment = Alignment.End) {
+                // Grid Size Slider - only show for puzzle types that need it
+                if (selectedType.needsGridSize) {
+                    Text(
+                        text = "Grid Size",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    
+                    val currentGridSize = gridSize.roundToInt()
+                    val pieceCount = when (selectedType) {
+                        PuzzleType.SLIDING -> currentGridSize * currentGridSize - 1
+                        PuzzleType.MEMORY_MATCH -> (currentGridSize * currentGridSize / 2) * 2 // Pairs (even number)
+                        else -> currentGridSize * currentGridSize
+                    }
+                    val difficultyLabel = when {
+                        currentGridSize <= 4 -> "Easy"
+                        currentGridSize <= 6 -> "Medium"
+                        currentGridSize <= 10 -> "Hard"
+                        currentGridSize <= 16 -> "Expert"
+                        else -> "Master"
+                    }
+                    
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = difficultyLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.secondary
+                                text = "${currentGridSize}×${currentGridSize}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = difficultyLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    text = if (selectedType == PuzzleType.MEMORY_MATCH) "${pieceCount / 2} pairs" else "$pieceCount pieces",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        Slider(
+                            value = gridSize,
+                            onValueChange = { gridSize = it },
+                            valueRange = if (selectedType == PuzzleType.MEMORY_MATCH) 2f..6f else 3f..25f,
+                            steps = if (selectedType == PuzzleType.MEMORY_MATCH) 3 else 21,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = if (selectedType == PuzzleType.MEMORY_MATCH) "2×2" else "3×3",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "$pieceCount pieces",
+                                text = if (selectedType == PuzzleType.MEMORY_MATCH) "6×6" else "25×25",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                    
-                    Slider(
-                        value = gridSize,
-                        onValueChange = { gridSize = it },
-                        valueRange = 3f..25f,
-                        steps = 21, // 25 - 3 - 1 = 21 steps for discrete values
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "3×3",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "25×25",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }

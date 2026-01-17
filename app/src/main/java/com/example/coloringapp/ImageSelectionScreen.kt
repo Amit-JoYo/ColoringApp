@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +32,8 @@ fun ImageSelectionScreen(
     viewModel: PaintingViewModel = viewModel(), 
     onImageSelected: () -> Unit,
     onWebSearchRequested: (String) -> Unit,
-    onPuzzleMode: () -> Unit = {}
+    onPuzzleMode: () -> Unit = {},
+    onSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showSearchDialog by remember { mutableStateOf(false) }
@@ -63,7 +65,12 @@ fun ImageSelectionScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
             )
         },
         floatingActionButton = {

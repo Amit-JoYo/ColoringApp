@@ -135,9 +135,10 @@ fun PuzzleScreen(
                     CircularProgressIndicator()
                 }
                 webSearchQuery != null -> {
-                    // Show web search screen
+                    // Show web search screen - use PHOTO mode for puzzles
                     WebImageSearchScreen(
                         searchQuery = webSearchQuery!!,
+                        searchMode = ImageSearchMode.PHOTO,  // Puzzles need color photos
                         onImageSelected = { bitmap ->
                             webSearchQuery = null
                             puzzleViewModel.setBitmap(bitmap)
@@ -160,6 +161,20 @@ fun PuzzleScreen(
                         }
                         PuzzleType.JIGSAW -> {
                             JigsawPuzzleGame(
+                                bitmap = puzzleBitmap!!,
+                                gridSize = puzzleConfig!!.gridSize,
+                                onPuzzleSolved = { puzzleViewModel.onPuzzleSolved() }
+                            )
+                        }
+                        PuzzleType.COLOR_BY_NUMBER -> {
+                            ColorByNumberGame(
+                                imageBitmap = puzzleBitmap!!,
+                                onComplete = { puzzleViewModel.onPuzzleSolved() },
+                                onBack = { puzzleViewModel.backToConfig() }
+                            )
+                        }
+                        PuzzleType.MEMORY_MATCH -> {
+                            MemoryMatchGame(
                                 bitmap = puzzleBitmap!!,
                                 gridSize = puzzleConfig!!.gridSize,
                                 onPuzzleSolved = { puzzleViewModel.onPuzzleSolved() }

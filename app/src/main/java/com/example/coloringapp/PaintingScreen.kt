@@ -71,7 +71,8 @@ import android.widget.Toast
 fun PaintingScreen(
     viewModel: PaintingViewModel = viewModel(),
     onPuzzleMode: () -> Unit = {},
-    onPuzzleFromBitmap: (Bitmap) -> Unit = {}
+    onPuzzleFromBitmap: (Bitmap) -> Unit = {},
+    onSettings: () -> Unit = {}
 ) {
     val imageBitmap by viewModel.imageBitmap.collectAsState()
     val imageSessionId by viewModel.imageSessionId.collectAsState()
@@ -116,7 +117,8 @@ fun PaintingScreen(
                 onWebSearchRequested = { query ->
                     viewModel.startWebSearch(query)
                 },
-                onPuzzleMode = onPuzzleMode
+                onPuzzleMode = onPuzzleMode,
+                onSettings = onSettings
             )
         } else {
             PaintingCanvas(
