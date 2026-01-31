@@ -65,7 +65,17 @@ data class GeminiColorInfo(
 enum class Difficulty(val label: String, val minRegionSize: Float, val edgeThreshold: Int) {
     EASY("Easy", 0.005f, 40),      // Fewer, larger regions
     MEDIUM("Medium", 0.002f, 30),   // Balanced
-    HARD("Hard", 0.001f, 20)        // More, smaller regions
+    HARD("Hard", 0.001f, 20);        // More, smaller regions
+    
+    companion object {
+        fun fromColorByNumberDifficulty(cbnDifficulty: ColorByNumberDifficulty): Difficulty {
+            return when (cbnDifficulty) {
+                ColorByNumberDifficulty.EASY -> EASY
+                ColorByNumberDifficulty.MEDIUM -> MEDIUM
+                ColorByNumberDifficulty.HARD -> HARD
+            }
+        }
+    }
 }
 
 /**
@@ -93,7 +103,10 @@ private fun downscaleIfNeeded(bitmap: Bitmap, maxDimension: Int = 1200): Bitmap 
 fun ColorByNumberGame(
     imageBitmap: Bitmap,
     onComplete: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    // Optional pre-configured settings (if provided, skip settings dialog)
+    configuredNumberOfColors: Int? = null,
+    configuredDifficulty: ColorByNumberDifficulty? = null
 ) {
     val context = LocalContext.current
     var regions by remember { mutableStateOf<List<ColorRegion>>(emptyList()) }
@@ -118,10 +131,15 @@ fun ColorByNumberGame(
     val minScale = 1f
     val maxScale = 5f
     
-    // Settings state
-    var showSettings by remember { mutableStateOf(true) }
-    var numberOfColors by remember { mutableStateOf(12) }
-    var difficulty by remember { mutableStateOf(Difficulty.MEDIUM) }
+    // Settings state - use pre-configured values if provided
+    var showSettings by remember { mutableStateOf(configuredNumberOfColors == null) }
+    var numberOfColors by remember { mutableStateOf(configuredNumberOfColors ?: 12) }
+    var difficulty by remember { mutableStateOf(
+        if (configuredDifficulty != null) 
+            Difficulty.fromColorByNumberDifficulty(configuredDifficulty) 
+        else 
+            Difficulty.MEDIUM
+    ) }
     
     val textMeasurer = rememberTextMeasurer()
     
@@ -129,8 +147,15 @@ fun ColorByNumberGame(
     val apiKey = remember { getGeminiApiKey(context) }
     val aiProvider = remember { getAIProvider(context) }
     
-    // Track if processing has started
-    var processingStarted by remember { mutableStateOf(false) }
+    // Track if processing has started - auto-start if settings were pre-configured
+    var processingStarted by remember { mutableStateOf(configuredNumberOfColors != null) }
+    
+    // Also set isLoading when auto-starting
+    LaunchedEffect(Unit) {
+        if (configuredNumberOfColors != null) {
+            isLoading = true
+        }
+    }
     
     // Generate color-by-number image when settings are confirmed
     LaunchedEffect(processingStarted) {
@@ -158,15 +183,35 @@ fun ColorByNumberGame(
                     
                     displayBitmap = createDisplayBitmap(result.first, regions, colorPalette).asImageBitmap()
                 } else {
-                    // Use local processing with user settings
-                    loadingMessage = "Creating coloring page locally..."
+                    // Use SLIC superpixel segmentation for local processing
+                    // This works on ANY image type (photos, art, screenshots)
+                    loadingMessage = "Analyzing image with SLIC..."
                     usingAI = false
                     
-                    val lineArt = convertToLineArtLocal(scaledBitmap, difficulty.edgeThreshold)
+                    // Calculate superpixel count based on difficulty
+                    val superpixelCount = getRecommendedSuperpixelCount(
+                        scaledBitmap.width, 
+                        scaledBitmap.height, 
+                        difficulty
+                    )
+                    val compactness = getRecommendedCompactness(difficulty)
+                    
+                    loadingMessage = "Segmenting into regions..."
+                    val slicResult = slicSuperpixels(
+                        bitmap = scaledBitmap,
+                        k = superpixelCount,
+                        compactness = compactness,
+                        maxIterations = 10
+                    )
+                    
+                    loadingMessage = "Generating outlines..."
+                    val lineArt = generateOutlinesFromSlic(slicResult, lineWidth = 2)
                     colorByNumberBitmap = lineArt
                     
-                    val result = analyzeImageForColorByNumber(scaledBitmap, lineArt, numberOfColors, difficulty)
+                    loadingMessage = "Creating color palette..."
+                    val result = slicToColorRegions(scaledBitmap, slicResult, numberOfColors)
                     colorPalette = result.first
+                    
                     // Generate descriptive color names using our getColorName function
                     colorNames = result.first.mapIndexed { i, color -> 
                         val r = Color.red(color)
@@ -187,13 +232,27 @@ fun ColorByNumberGame(
                     errorMessage = "Error: ${e.message}. Using local processing..."
                 }
                 
-                // Fallback to local processing
+                // Fallback to SLIC local processing
                 try {
                     val fallbackScaled = downscaleIfNeeded(imageBitmap, maxDimension = 1200)
-                    val lineArt = convertToLineArtLocal(fallbackScaled, difficulty.edgeThreshold)
+                    
+                    // Use SLIC for fallback as well
+                    val superpixelCount = getRecommendedSuperpixelCount(
+                        fallbackScaled.width, 
+                        fallbackScaled.height, 
+                        difficulty
+                    )
+                    val slicResult = slicSuperpixels(
+                        bitmap = fallbackScaled,
+                        k = superpixelCount,
+                        compactness = getRecommendedCompactness(difficulty),
+                        maxIterations = 10
+                    )
+                    
+                    val lineArt = generateOutlinesFromSlic(slicResult, lineWidth = 2)
                     colorByNumberBitmap = lineArt
                     
-                    val result = analyzeImageForColorByNumber(fallbackScaled, lineArt, numberOfColors, difficulty)
+                    val result = slicToColorRegions(fallbackScaled, slicResult, numberOfColors)
                     colorPalette = result.first
                     colorNames = result.first.mapIndexed { i, color -> 
                         val r = Color.red(color)

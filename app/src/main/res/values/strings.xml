@@ -1,3 +1,137 @@
 <resources>
     <string name="app_name">Coloring App</string>
+    
+    <!-- Game Hub -->
+    <string name="choose_your_game">Choose Your Game</string>
+    <string name="pick_an_image">Pick an Image</string>
+    <string name="game_settings">Game Settings</string>
+    <string name="continue_btn">Continue</string>
+    <string name="start_game">START GAME!</string>
+    
+    <!-- Game Modes -->
+    <string name="free_drawing">Free Drawing</string>
+    <string name="free_drawing_desc">Draw on a blank canvas</string>
+    <string name="free_paint">Free Paint</string>
+    <string name="free_paint_desc">Paint and color freely on your image</string>
+    <string name="sliding_puzzle">Sliding Puzzle</string>
+    <string name="sliding_puzzle_desc">Slide tiles to solve the puzzle</string>
+    <string name="jigsaw_puzzle">Jigsaw Puzzle</string>
+    <string name="jigsaw_puzzle_desc">Drag pieces to their correct positions</string>
+    <string name="color_by_number">Color by Number</string>
+    <string name="color_by_number_desc">Fill each region with the correct color</string>
+    <string name="memory_match">Memory Match</string>
+    <string name="memory_match_desc">Find matching pairs of image tiles</string>
+    
+    <!-- Image Selection -->
+    <string name="suggested_for">Suggested for %s:</string>
+    <string name="get_an_image">Get an Image</string>
+    <string name="gallery">Gallery</string>
+    <string name="camera">Camera</string>
+    <string name="search">Search</string>
+    <string name="sample_images">Sample Images</string>
+    <string name="search_images">Search Images</string>
+    <string name="search_keywords">Search keywords</string>
+    <string name="quick_suggestions">Quick suggestions:</string>
+    
+    <!-- Difficulty -->
+    <string name="difficulty">Difficulty</string>
+    <string name="easy">Easy</string>
+    <string name="medium">Medium</string>
+    <string name="hard">Hard</string>
+    <string name="easy_desc">Perfect for beginners</string>
+    <string name="medium_desc">A nice challenge</string>
+    <string name="hard_desc">For puzzle pros</string>
+    <string name="expert_desc">Ultimate challenge!</string>
+    
+    <!-- Victory -->
+    <string name="puzzle_complete">Puzzle Complete!</string>
+    <string name="great_job">Great job!</string>
+    <string name="play_again">Play Again</string>
+    <string name="exit">Exit</string>
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="language">Language</string>
+    <string name="select_language">Select Language</string>
+    <string name="english">English</string>
+    <string name="hebrew">עברית</string>
+    <string name="system_default">System Default</string>
+    <string name="language_change_note">Language changes will apply immediately</string>
+    
+    <!-- Audio Settings -->
+    <string name="audio">Audio</string>
+    <string name="background_music">Background Music</string>
+    <string name="music">Music</string>
+    <string name="music_on">On</string>
+    <string name="music_off">Off</string>
+    <string name="volume">Volume</string>
+    <string name="music_source">Music Source</string>
+    <string name="offline_music">Offline Music</string>
+    <string name="youtube_music">YouTube Music</string>
+    <string name="no_offline_music">No offline music files found</string>
+    <string name="youtube_music_installed">Opens YouTube Music app</string>
+    <string name="youtube_music_browser">Opens in browser</string>
+    <string name="play_relaxing_music">Play Relaxing Music</string>
+    <string name="sound_effects">Sound Effects</string>
+    
+    <!-- API Settings -->
+    <string name="save_api_key">Save API Key</string>
+    <string name="saved">Saved</string>
+    <string name="api_key_saved">Your API key has been saved securely.</string>
+    <string name="ok">OK</string>
+    <string name="how_color_by_number_works">How Color by Number Works</string>
+    <string name="color_by_number_explanation">• With Gemini: Your image is sent to Google\'s AI which creates a professional color-by-number version with clean outlines and numbered regions.\n\n• With Local Processing: Uses on-device SLIC algorithm to segment images into regions. Works offline and handles photos well.</string>
+    
+    <!-- General -->
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    
+    <!-- Painting -->
+    <string name="brush">Brush</string>
+    <string name="fill">Fill</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="clear">Clear</string>
+    <string name="colors">Colors</string>
+    <string name="brush_size">Brush Size</string>
+    
+    <!-- Color by Number Settings -->
+    <string name="number_of_colors">Number of Colors: %d</string>
+    <string name="simple">Simple</string>
+    <string name="detailed">Detailed</string>
+    <string name="region_size">Region Size: %s</string>
+    <string name="easy_regions_desc">Fewer, larger regions - easier to color</string>
+    <string name="medium_regions_desc">Balanced regions - moderate difficulty</string>
+    <string name="hard_regions_desc">More, smaller regions - detailed coloring</string>
+    <string name="ready_to_start">Ready to start!</string>
+    
+    <!-- Search suggestions - localized -->
+    <string name="suggestion_mandala">mandala</string>
+    <string name="suggestion_coloring_page">coloring page</string>
+    <string name="suggestion_line_art">line art</string>
+    <string name="suggestion_sketch">sketch</string>
+    <string name="suggestion_drawing">drawing</string>
+    <string name="suggestion_landscape">landscape</string>
+    <string name="suggestion_famous_painting">famous painting</string>
+    <string name="suggestion_cityscape">cityscape</string>
+    <string name="suggestion_nature">nature</string>
+    <string name="suggestion_sunset">sunset</string>
+    <string name="suggestion_scenery">beautiful scenery</string>
+    <string name="suggestion_animals">animals</string>
+    <string name="suggestion_flowers">flowers</string>
+    <string name="suggestion_architecture">architecture</string>
+    <string name="suggestion_art">art</string>
+    <string name="suggestion_cartoon">cartoon</string>
+    <string name="suggestion_simple_art">simple art</string>
+    <string name="suggestion_portrait">portrait</string>
+    <string name="suggestion_illustration">illustration</string>
+    <string name="suggestion_icons">icons</string>
+    <string name="suggestion_objects">objects</string>
+    <string name="suggestion_emoji">emoji</string>
+    <string name="suggestion_patterns">patterns</string>
+    <string name="search_placeholder">e.g., cats, sunset, art</string>
 </resources>

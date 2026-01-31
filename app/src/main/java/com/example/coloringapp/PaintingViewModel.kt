@@ -29,6 +29,10 @@ import com.example.coloringapp.R
 
 class PaintingViewModel : ViewModel() {
 
+    companion object {
+        private const val MAX_UNDO_DEPTH = 20
+    }
+
     private val _imageBitmap = MutableStateFlow<Bitmap?>(null)
     val imageBitmap = _imageBitmap.asStateFlow()
 
@@ -492,6 +496,9 @@ class PaintingViewModel : ViewModel() {
         _colorLayer.value?.let { colorLayer ->
             // Save the current color layer state before starting the brush stroke
             undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), "Brush Stroke", System.currentTimeMillis()))
+            if (undoStack.size > MAX_UNDO_DEPTH) {
+                undoStack.removeAt(0)
+            }
             redoStack.clear()
             updateUndoRedoStates()
         }
@@ -515,6 +522,9 @@ class PaintingViewModel : ViewModel() {
             val nextState = redoStack.removeAt(redoStack.size - 1)
             _colorLayer.value?.let { colorLayer ->
                 undoStack.add(UndoState(colorLayer.copy(colorLayer.config, true), nextState.action, System.currentTimeMillis()))
+                if (undoStack.size > MAX_UNDO_DEPTH) {
+                    undoStack.removeAt(0)
+                }
             }
             _colorLayer.value = nextState.bitmap.copy(nextState.bitmap.config, true)
             updateDisplayBitmap()

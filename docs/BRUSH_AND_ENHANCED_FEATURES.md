@@ -2,11 +2,39 @@
 
 ## Overview
 
-This document describes the brush tool, enhanced color picker, and advanced undo/redo features added in version 1.2.0 of the ColoringApp. These enhancements provide users with more creative control and a better coloring experience.
+This document describes the brush tool, enhanced color picker, and advanced undo/redo features in the ColoringApp. These enhancements provide users with more creative control and a better coloring experience.
 
 ## Features
 
-### 1. Brush Tool (Free-Hand Drawing)
+### 1. Free Paint Mode (v1.5.3)
+
+Free Paint mode is designed for coloring pages with both paint bucket and brush tools.
+
+#### Key Features:
+- **Paint Bucket Tool (🪣):** Tap any area to flood-fill with the selected color
+- **Brush Tool (🖌️):** Free-hand drawing with 5 brush types
+- **Tool Mode Toggle:** Switch between Fill and Brush modes at the top of the toolbar
+- **5 Brush Types:**
+  - **Normal (🖌️):** Standard smooth brush
+  - **Marker (🖍️):** Bold strokes with rounded caps
+  - **Rainbow (🌈):** Cycles through rainbow colors as you draw
+  - **Glow (✨):** Soft glowing effect around strokes
+  - **Spray (💨):** Spray paint effect with scattered dots
+- **28 Color Palette:** Extended colors organized by family
+- **HSL Custom Picker:** Create any color with Hue/Saturation/Lightness sliders
+
+#### Coloring Page Mode:
+- **Smart Search:** Searches for "coloring page" images online
+- **Auto B&W Conversion:** Converts colorful images to black & white line art
+- **Smart Detection:** Already B&W images skip conversion to preserve quality
+
+#### Optimized Flood Fill:
+- **Scanline Algorithm:** 10-100x faster than pixel-by-pixel BFS
+- **Pixel Array Processing:** Reads/writes all pixels at once
+- **Outline Protection:** Black lines (brightness < 50) are never filled
+- **Color Tolerance:** Handles anti-aliased edges gracefully
+
+### 2. Brush Tool (Free-Hand Drawing)
 
 The brush tool allows users to draw freely on the canvas, providing more precision and artistic control compared to the flood-fill tool.
 

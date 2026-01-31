@@ -52,6 +52,13 @@ class PuzzleViewModel : ViewModel() {
     fun setBitmap(bitmap: Bitmap) {
         _puzzleBitmap.value = bitmap.copy(Bitmap.Config.ARGB_8888, true)
     }
+    
+    /**
+     * Clears the current bitmap.
+     */
+    fun clearBitmap() {
+        _puzzleBitmap.value = null
+    }
 
     /**
      * Sets the bitmap from a drawable resource.
@@ -67,6 +74,115 @@ class PuzzleViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+    
+    /**
+     * Sets the bitmap from a drawable resource and converts it to a coloring page (black & white line art).
+     */
+    fun setBitmapFromDrawableAsColoringPage(context: Context, drawableRes: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            try {
+                val drawable = context.resources.getDrawable(drawableRes, context.theme)
+                val bitmap = drawable.toBitmap()
+                val coloringPage = convertToColoringPage(bitmap.copy(Bitmap.Config.ARGB_8888, true))
+                _puzzleBitmap.value = coloringPage
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    /**
+     * Check if an image is already mostly black and white.
+     */
+    private fun isAlreadyBlackAndWhite(bitmap: Bitmap): Boolean {
+        val width = bitmap.width
+        val height = bitmap.height
+        
+        var colorfulPixels = 0
+        var totalSamples = 0
+        
+        for (y in 0 until height step 10) {
+            for (x in 0 until width step 10) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                
+                val max = maxOf(r, g, b)
+                val min = minOf(r, g, b)
+                val diff = max - min
+                
+                if (diff > 30) {
+                    colorfulPixels++
+                }
+                totalSamples++
+            }
+        }
+        
+        return colorfulPixels < totalSamples * 0.1
+    }
+    
+    /**
+     * Convert a colorful image to a black and white coloring page (line art style).
+     * If already black and white, returns the original.
+     */
+    private fun convertToColoringPage(bitmap: Bitmap): Bitmap {
+        if (isAlreadyBlackAndWhite(bitmap)) {
+            return bitmap
+        }
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        // Convert to grayscale
+        val grayscale = IntArray(width * height)
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            val r = (pixel shr 16) and 0xFF
+            val g = (pixel shr 8) and 0xFF
+            val b = pixel and 0xFF
+            val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+            grayscale[i] = gray
+        }
+        
+        // Apply edge detection (Sobel-like filter)
+        val output = IntArray(width * height)
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val idx = y * width + x
+                
+                val gx = (-grayscale[(y - 1) * width + (x - 1)] + grayscale[(y - 1) * width + (x + 1)]
+                        - 2 * grayscale[y * width + (x - 1)] + 2 * grayscale[y * width + (x + 1)]
+                        - grayscale[(y + 1) * width + (x - 1)] + grayscale[(y + 1) * width + (x + 1)])
+                
+                val gy = (-grayscale[(y - 1) * width + (x - 1)] - 2 * grayscale[(y - 1) * width + x] - grayscale[(y - 1) * width + (x + 1)]
+                        + grayscale[(y + 1) * width + (x - 1)] + 2 * grayscale[(y + 1) * width + x] + grayscale[(y + 1) * width + (x + 1)])
+                
+                val magnitude = kotlin.math.sqrt((gx * gx + gy * gy).toDouble()).toInt()
+                val edgeValue = if (magnitude > 30) 0 else 255
+                output[idx] = (0xFF shl 24) or (edgeValue shl 16) or (edgeValue shl 8) or edgeValue
+            }
+        }
+        
+        // Fill edges with white
+        for (x in 0 until width) {
+            output[x] = 0xFFFFFFFF.toInt()
+            output[(height - 1) * width + x] = 0xFFFFFFFF.toInt()
+        }
+        for (y in 0 until height) {
+            output[y * width] = 0xFFFFFFFF.toInt()
+            output[y * width + width - 1] = 0xFFFFFFFF.toInt()
+        }
+        
+        result.setPixels(output, 0, width, 0, 0, width, height)
+        return result
     }
 
     /**

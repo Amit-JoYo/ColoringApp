@@ -1,0 +1,137 @@
+<resources>
+    <string name="app_name">אפליקציית צביעה</string>
+    
+    <!-- Game Hub -->
+    <string name="choose_your_game">בחר את המשחק שלך</string>
+    <string name="pick_an_image">בחר תמונה</string>
+    <string name="game_settings">הגדרות משחק</string>
+    <string name="continue_btn">המשך</string>
+    <string name="start_game">התחל משחק!</string>
+    
+    <!-- Game Modes -->
+    <string name="free_drawing">ציור חופשי</string>
+    <string name="free_drawing_desc">צייר על קנבס ריק</string>
+    <string name="free_paint">צביעה חופשית</string>
+    <string name="free_paint_desc">צבע וצייר בחופשיות על התמונה</string>
+    <string name="sliding_puzzle">פאזל הזזה</string>
+    <string name="sliding_puzzle_desc">הזז את האריחים כדי לפתור את הפאזל</string>
+    <string name="jigsaw_puzzle">פאזל חיתוך</string>
+    <string name="jigsaw_puzzle_desc">גרור חלקים למיקום הנכון</string>
+    <string name="color_by_number">צביעה לפי מספרים</string>
+    <string name="color_by_number_desc">מלא כל אזור בצבע הנכון</string>
+    <string name="memory_match">משחק זיכרון</string>
+    <string name="memory_match_desc">מצא זוגות תואמים של קלפים</string>
+    
+    <!-- Image Selection -->
+    <string name="suggested_for">מומלץ עבור %s:</string>
+    <string name="get_an_image">בחר תמונה</string>
+    <string name="gallery">גלריה</string>
+    <string name="camera">מצלמה</string>
+    <string name="search">חיפוש</string>
+    <string name="sample_images">תמונות לדוגמה</string>
+    <string name="search_images">חפש תמונות</string>
+    <string name="search_keywords">מילות חיפוש</string>
+    <string name="quick_suggestions">הצעות מהירות:</string>
+    
+    <!-- Difficulty -->
+    <string name="difficulty">רמת קושי</string>
+    <string name="easy">קל</string>
+    <string name="medium">בינוני</string>
+    <string name="hard">קשה</string>
+    <string name="easy_desc">מושלם למתחילים</string>
+    <string name="medium_desc">אתגר נחמד</string>
+    <string name="hard_desc">למומחי פאזלים</string>
+    <string name="expert_desc">האתגר האולטימטיבי!</string>
+    
+    <!-- Victory -->
+    <string name="puzzle_complete">הפאזל הושלם!</string>
+    <string name="great_job">עבודה מצוינת!</string>
+    <string name="play_again">שחק שוב</string>
+    <string name="exit">יציאה</string>
+    
+    <!-- Settings -->
+    <string name="settings">הגדרות</string>
+    <string name="language">שפה</string>
+    <string name="select_language">בחר שפה</string>
+    <string name="english">English</string>
+    <string name="hebrew">עברית</string>
+    <string name="system_default">ברירת מחדל מערכת</string>
+    <string name="language_change_note">שינויי שפה יחולו מיד</string>
+    
+    <!-- Audio Settings -->
+    <string name="audio">שמע</string>
+    <string name="background_music">מוזיקת רקע</string>
+    <string name="music">מוזיקה</string>
+    <string name="music_on">פועל</string>
+    <string name="music_off">כבוי</string>
+    <string name="volume">עוצמה</string>
+    <string name="music_source">מקור מוזיקה</string>
+    <string name="offline_music">מוזיקה מקומית</string>
+    <string name="youtube_music">YouTube Music</string>
+    <string name="no_offline_music">לא נמצאו קבצי מוזיקה מקומיים</string>
+    <string name="youtube_music_installed">פותח את אפליקציית YouTube Music</string>
+    <string name="youtube_music_browser">נפתח בדפדפן</string>
+    <string name="play_relaxing_music">הפעל מוזיקה מרגיעה</string>
+    <string name="sound_effects">אפקטי קול</string>
+    
+    <!-- API Settings -->
+    <string name="save_api_key">שמור מפתח API</string>
+    <string name="saved">נשמר</string>
+    <string name="api_key_saved">מפתח ה-API נשמר בצורה מאובטחת.</string>
+    <string name="ok">אישור</string>
+    <string name="how_color_by_number_works">איך צביעה לפי מספרים עובד</string>
+    <string name="color_by_number_explanation">• עם Gemini: התמונה נשלחת ל-AI של Google שיוצר גרסת צביעה לפי מספרים מקצועית עם קווי מתאר נקיים ואזורים ממוספרים.\n\n• עם עיבוד מקומי: משתמש באלגוריתם SLIC לחלוקת תמונות לאזורים. עובד ללא חיבור לאינטרנט ומתמודד היטב עם תמונות.</string>
+    
+    <!-- General -->
+    <string name="back">חזור</string>
+    <string name="cancel">ביטול</string>
+    <string name="loading">טוען…</string>
+    <string name="error">שגיאה</string>
+    
+    <!-- Painting -->
+    <string name="brush">מברשת</string>
+    <string name="fill">מילוי</string>
+    <string name="undo">בטל</string>
+    <string name="redo">שחזר</string>
+    <string name="save">שמור</string>
+    <string name="share">שתף</string>
+    <string name="clear">נקה</string>
+    <string name="colors">צבעים</string>
+    <string name="brush_size">גודל מברשת</string>
+    
+    <!-- Color by Number Settings -->
+    <string name="number_of_colors">מספר צבעים: %d</string>
+    <string name="simple">פשוט</string>
+    <string name="detailed">מפורט</string>
+    <string name="region_size">גודל אזור: %s</string>
+    <string name="easy_regions_desc">פחות אזורים, גדולים יותר - קל יותר לצביעה</string>
+    <string name="medium_regions_desc">אזורים מאוזנים - קושי בינוני</string>
+    <string name="hard_regions_desc">יותר אזורים, קטנים יותר - צביעה מפורטת</string>
+    <string name="ready_to_start">מוכן להתחיל!</string>
+    
+    <!-- Search suggestions - localized -->
+    <string name="suggestion_mandala">מנדלה</string>
+    <string name="suggestion_coloring_page">דף צביעה</string>
+    <string name="suggestion_line_art">ציור קווי</string>
+    <string name="suggestion_sketch">סקיצה</string>
+    <string name="suggestion_drawing">ציור</string>
+    <string name="suggestion_landscape">נוף</string>
+    <string name="suggestion_famous_painting">ציור מפורסם</string>
+    <string name="suggestion_cityscape">נוף עירוני</string>
+    <string name="suggestion_nature">טבע</string>
+    <string name="suggestion_sunset">שקיעה</string>
+    <string name="suggestion_scenery">נוף יפה</string>
+    <string name="suggestion_animals">חיות</string>
+    <string name="suggestion_flowers">פרחים</string>
+    <string name="suggestion_architecture">אדריכלות</string>
+    <string name="suggestion_art">אומנות</string>
+    <string name="suggestion_cartoon">קריקטורה</string>
+    <string name="suggestion_simple_art">אומנות פשוטה</string>
+    <string name="suggestion_portrait">דיוקן</string>
+    <string name="suggestion_illustration">איור</string>
+    <string name="suggestion_icons">אייקונים</string>
+    <string name="suggestion_objects">חפצים</string>
+    <string name="suggestion_emoji">אימוג׳י</string>
+    <string name="suggestion_patterns">דפוסים</string>
+    <string name="search_placeholder">לדוגמה: חתולים, שקיעה, אומנות</string>
+</resources>

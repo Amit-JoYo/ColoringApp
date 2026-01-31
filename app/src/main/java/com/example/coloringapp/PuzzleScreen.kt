@@ -152,6 +152,18 @@ fun PuzzleScreen(
                 isPlaying && puzzleBitmap != null && puzzleConfig != null -> {
                     // Show the puzzle game
                     when (puzzleConfig!!.type) {
+                        PuzzleType.FREE_DRAWING -> {
+                            FreeDrawingCanvas(
+                                onBack = { puzzleViewModel.backToConfig() }
+                            )
+                        }
+                        PuzzleType.PAINTING -> {
+                            FreePaintCanvas(
+                                backgroundBitmap = puzzleBitmap!!,
+                                onComplete = { puzzleViewModel.onPuzzleSolved() },
+                                onBack = { puzzleViewModel.backToConfig() }
+                            )
+                        }
                         PuzzleType.SLIDING -> {
                             SlidingPuzzleGame(
                                 bitmap = puzzleBitmap!!,

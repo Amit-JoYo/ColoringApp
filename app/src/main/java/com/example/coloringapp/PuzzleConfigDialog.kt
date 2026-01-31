@@ -17,11 +17,22 @@ import kotlin.math.roundToInt
 /**
  * Enum representing the type of puzzle game.
  */
-enum class PuzzleType(val displayName: String, val description: String, val needsGridSize: Boolean = true) {
-    SLIDING("Sliding Puzzle", "Slide tiles to solve the puzzle", true),
-    JIGSAW("Jigsaw Puzzle", "Drag pieces to their correct positions", true),
-    COLOR_BY_NUMBER("Color by Number", "AI creates a coloring page - fill each region", false),
-    MEMORY_MATCH("Memory Match", "Find matching pairs of image tiles", true)
+enum class PuzzleType(val displayName: String, val description: String, val needsGridSize: Boolean = true, val needsImage: Boolean = true) {
+    FREE_DRAWING("Free Drawing", "Draw on a blank canvas", false, false),
+    PAINTING("Free Paint", "Paint and color freely on your image", false, true),
+    SLIDING("Sliding Puzzle", "Slide tiles to solve the puzzle", true, true),
+    JIGSAW("Jigsaw Puzzle", "Drag pieces to their correct positions", true, true),
+    COLOR_BY_NUMBER("Color by Number", "AI creates a coloring page - fill each region", false, true),
+    MEMORY_MATCH("Memory Match", "Find matching pairs of image tiles", true, true)
+}
+
+/**
+ * Difficulty levels for Color by Number game
+ */
+enum class ColorByNumberDifficulty(val label: String, val minRegionSize: Float, val edgeThreshold: Int) {
+    EASY("Easy", 0.005f, 40),      // Fewer, larger regions
+    MEDIUM("Medium", 0.002f, 30),   // Balanced
+    HARD("Hard", 0.001f, 20)        // More, smaller regions
 }
 
 /**
@@ -29,7 +40,10 @@ enum class PuzzleType(val displayName: String, val description: String, val need
  */
 data class PuzzleConfig(
     val type: PuzzleType,
-    val gridSize: Int
+    val gridSize: Int,
+    // Color by Number specific settings
+    val numberOfColors: Int = 12,
+    val colorByNumberDifficulty: ColorByNumberDifficulty = ColorByNumberDifficulty.MEDIUM
 ) {
     val pieceCount: Int get() = if (type == PuzzleType.SLIDING) gridSize * gridSize - 1 else gridSize * gridSize
     

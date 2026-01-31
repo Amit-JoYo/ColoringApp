@@ -1,6 +1,6 @@
 # Coloring Book App
 
-**Latest Version: v1.5.0**
+**Latest Version: v1.5.3**
 
 A feature-rich coloring book app for Android that allows users to select an image, convert it into a line drawing, and color it using both flood-fill and free-hand brush tools. Transform your artwork into interactive puzzles! Save and share your creations!
 
@@ -22,6 +22,14 @@ A feature-rich coloring book app for Android that allows users to select an imag
 - **Share:** Share your creations with friends and family
 - **Undo/Redo:** Advanced undo/redo with action tracking
 - **Back Navigation:** Navigate back to the image selection screen.
+
+### What's New in v1.5.3
+- 🪣 **Paint Bucket Tool:** Tap to flood-fill areas in Free Paint mode
+- ⚡ **Optimized Flood Fill:** Scanline algorithm for instant fills on large areas
+- 🖼️ **Coloring Page Mode:** Free Paint searches for coloring pages and converts images to B&W line art
+- 🔍 **Smart B&W Detection:** Already black & white images skip conversion
+- 🎨 **5 Brush Types:** Normal, Marker, Rainbow, Glow, and Spray effects
+- 🌈 **28 Color Palette:** Extended colors organized by family + HSL custom picker
 
 ### What's New in v1.5.0
 - 🧩 **Jigsaw Puzzle Mode:** Transform your artwork into authentic jigsaw puzzles

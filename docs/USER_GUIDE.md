@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [Getting Started](#getting-started)
+- [Game Modes](#game-modes)
 - [Basic Features](#basic-features)
 - [Advanced Techniques](#advanced-techniques)
 - [Tips & Tricks](#tips--tricks)
@@ -28,6 +29,48 @@ When you first open ColoringApp, you'll see:
 - **RAM**: 2GB minimum (4GB recommended for large images)
 - **Storage**: 100MB free space
 - **Display**: Any screen size (optimized for phones and tablets)
+
+## Game Modes
+
+### Game Hub
+The Game Hub is the central screen where you can access all game modes:
+
+| Mode | Description |
+|------|-------------|
+| **Free Drawing** | Draw freely on a blank canvas with brush tools |
+| **Free Paint** | Color pre-made coloring pages with paint bucket and brushes |
+| **Color by Number** | Follow numbered regions to create artwork |
+| **Sliding Puzzle** | Slide tiles to reconstruct an image |
+| **Jigsaw Puzzle** | Assemble interlocking puzzle pieces |
+| **Memory Match** | Find matching pairs of hidden images |
+
+### Free Drawing Mode
+Draw anything you want on a blank canvas:
+- **5 Brush Types:** Normal, Marker, Rainbow, Glow, Spray
+- **28 Color Palette:** Extended colors organized by family
+- **HSL Custom Picker:** Create any color you want
+- **Adjustable Brush Size:** 5-100 pixels
+- **Undo/Redo Support**
+
+### Free Paint Mode (v1.5.3)
+Color beautiful coloring pages:
+
+#### Tools:
+- **🪣 Paint Bucket (Fill):** Tap any area to flood-fill with color
+- **🖌️ Brush:** Draw freely with 5 brush types
+
+#### How to Use:
+1. Select **Free Paint** from the Game Hub
+2. Choose a coloring page from local images or search online
+3. **Default tool is Paint Bucket** - tap white areas to fill them
+4. Black outlines are protected and won't be filled
+5. Switch to **Brush** mode for detailed work
+6. Undo works for both fills and brush strokes
+
+#### Coloring Page Features:
+- **Smart Search:** Searches for "coloring page" images online
+- **Auto Conversion:** Colorful images are converted to B&W line art
+- **B&W Detection:** Already black & white images skip conversion
 
 ## Basic Features
 

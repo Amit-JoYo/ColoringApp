@@ -1,5 +1,33 @@
 # ColoringApp Release Notes
 
+## Version 1.5.3 (January 31, 2026)
+
+### 🪣 Paint Bucket Tool for Free Paint Mode
+
+Free Paint mode now features a dedicated paint bucket tool for coloring areas, plus enhanced brush options.
+
+#### Key Features:
+- **Paint Bucket Tool (🪣):** Tap any area to flood-fill with the selected color
+- **Optimized Scanline Algorithm:** Instant fills even on large areas (10-100x faster)
+- **Smart Outline Protection:** Black lines are preserved during fill operations
+- **Tool Mode Toggle:** Switch between Fill (🪣) and Brush (🖌️) modes
+- **5 Brush Types:** Normal, Marker, Rainbow, Glow, and Spray effects
+- **28 Color Palette:** Extended colors organized by family
+- **HSL Custom Color Picker:** Create any color with Hue/Saturation/Lightness sliders
+
+### 🖼️ Coloring Page Mode
+
+- **Coloring Page Search:** Free Paint mode searches for "coloring page" images
+- **Auto B&W Conversion:** Colorful images are converted to black & white line art using Sobel edge detection
+- **Smart B&W Detection:** Already black & white images skip conversion to preserve quality
+
+### 🔧 Technical Improvements
+- **Scanline Flood Fill:** Uses pixel arrays for bulk read/write instead of per-pixel operations
+- **Memory Efficient:** No Set<Pair> for visited pixels - fills in-place
+- **Horizontal Span Filling:** Processes entire rows at once for massive speed improvement
+
+---
+
 ## Version 1.5.0 (December 28, 2025)
 
 ### 🧩 Major New Feature: Jigsaw Puzzle Mode
